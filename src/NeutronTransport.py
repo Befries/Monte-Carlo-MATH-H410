@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 def free_flight_sampling(coefficient, cos_theta, sample_size):
     # antithetic variables
     sample = np.random.rand(sample_size)
-    return -np.abs(cos_theta)/coefficient * np.log(sample)
+    return -np.abs(cos_theta) / coefficient * np.log(sample)
 
 
 """
@@ -23,7 +23,7 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
     neutron_position = np.zeros(sample_size)
     neutron_angle = np.ones(sample_size)
 
-    p_absorption = sigma_a/sigma_t
+    p_absorption = sigma_a / sigma_t
 
     passed = 0
 

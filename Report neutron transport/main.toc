@@ -1,0 +1,5 @@
+\babel@toc {french}{}\relax 
+\babel@toc {french}{}\relax 
+\contentsline {section}{\numberline {0.1}Readme}{2}{section.0.1}%
+\contentsline {subsubsection}{Conseil}{2}{section*.3}%
+\contentsline {subsubsection}{Macros déjà présentes}{2}{section*.4}%
