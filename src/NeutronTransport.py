@@ -25,6 +25,7 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
     p_absorption = sigma_a / sigma_t
 
     passed = 0
+    variance_estimator = 0  # considers that result of each neutron = h(x_k)
 
     while living_neutron > 0:
         # better estimator here + change sampling
@@ -37,6 +38,7 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
         transmitted = living_neutron - np.size(neutron_position)
         living_neutron = living_neutron - transmitted
         passed += transmitted
+        variance_estimator += transmitted
 
         # better estimator for scattering & absorption + russian roulette?
         not_dead = (neutron_position >= 0) | interaction_sampling(p_absorption, living_neutron)
@@ -48,6 +50,8 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
         # biasing strategies
         neutron_angle = np.random.uniform(low=-1, high=1, size=living_neutron)
 
-
-    return passed / sample_size
+    estimation = passed / sample_size
+    #  variance on the estimation D^2(I) = variance_estimation/N
+    variance_estimation = variance_estimator / sample_size - estimation**2  # 1/n sum(h(x_k)^2) - I^2
+    return estimation, variance_estimation
 
