@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def free_flight_sampling(coefficient, cos_theta, sample_size):
@@ -49,11 +48,6 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
         # biasing strategies
         neutron_angle = np.random.uniform(low=-1, high=1, size=living_neutron)
 
-        print(living_neutron)
 
     return passed / sample_size
 
-
-proba = simulate_transport(500, 200, 0.1, int(1e5))
-
-print(proba)
