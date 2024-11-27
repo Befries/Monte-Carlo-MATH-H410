@@ -48,7 +48,7 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
         # splitting strategies
 
         # biasing strategies
-        neutron_angle = np.random.uniform(low=-1, high=1, size=living_neutron)
+        neutron_angle = np.cos(np.random.uniform(low=0, high=np.pi, size=living_neutron))
 
     estimation = passed / sample_size
     #  variance on the estimation D^2(I) = variance_estimation/N
