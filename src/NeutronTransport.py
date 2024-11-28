@@ -1,57 +1,85 @@
 import numpy as np
 
 
-def free_flight_sampling(coefficient, cos_theta, sample_size):
-    # antithetic variables
+class NeutronPopulation:
+
+    def __init__(self, pop_size):
+        self.positions = np.zeros(pop_size)
+        self.cosines = np.ones(pop_size)
+        self.weights = np.ones(pop_size)
+
+    def size(self) -> int:
+        return self.positions.size
+
+
+def free_flight_sampling(proba_per_ul, cos_theta, sample_size) -> np.ndarray:
+    """
+    sample the distance traveled by a particle on its free flight along the x-axis
+    :param proba_per_ul: the probability of interaction per unit length
+    :param cos_theta: the director cosine of the neutron speed in the x direction
+    :param sample_size: the size of the random sample needed
+    :return: an array of distance randomly sampled according to the free flight PDF
+    """
     sample = np.random.rand(sample_size)
-    return -np.abs(cos_theta) / coefficient * np.log(sample)
+    return -np.abs(cos_theta) / proba_per_ul * np.log(sample)
 
 
-"""
-return false if an absorption occurred
-true if it is a scattering
-"""
-def interaction_sampling(p_absorption, sample_size):
+def interaction_sampling(p_absorption, sample_size) -> np.ndarray:
+    """
+    an array of boolean deciding whether the interaction is an absorption or a scattering
+    :param p_absorption: probability of absorption
+    :param sample_size: the size of the random sample
+    :return: false if an absorption occurred true if it is a scattering
+    """
     sample = np.random.rand(sample_size)
     return sample > p_absorption
 
 
+def free_flight(n_population: NeutronPopulation, wall_thickness, sigma_t) -> (float, float):
+    """
+
+    :param n_population:
+    :param wall_thickness:
+    :param sigma_t:
+    :return:
+    """
+    initial_pop_size = np.size(n_population.positions)
+    free_flight_distance = free_flight_sampling(sigma_t, n_population.cosines, initial_pop_size)
+
+    n_population.positions = np.sign(n_population.cosines) * free_flight_distance + n_population.positions
+    alive = n_population.positions <= wall_thickness
+    n_population.positions = n_population.positions[alive]
+
+    # change that part to account for better estimator, take weights into account
+    sub_estimator = initial_pop_size - np.size(n_population.positions)
+    sub_var_estimator = sub_estimator  # for the moment (1^2 = 1 so don't need to do fancy stuff for now)
+    return sub_estimator, sub_var_estimator
+
+
 def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
     sigma_t = sigma_s + sigma_a
-    living_neutron = sample_size
-    neutron_position = np.zeros(sample_size)
-    neutron_angle = np.ones(sample_size)
-
     p_absorption = sigma_a / sigma_t
 
-    passed = 0
-    variance_estimator = 0  # considers that result of each neutron = h(x_k)
+    estimator = 0
+    var_estimator = 0
 
-    while living_neutron > 0:
-        # better estimator here + change sampling
-        free_flight = free_flight_sampling(sigma_t, neutron_angle, living_neutron)
-        neutron_position = np.sign(neutron_angle) * free_flight + neutron_position
-        alive = neutron_position <= thickness
+    neutron_population = NeutronPopulation(sample_size)
 
-        neutron_position = neutron_position[alive]
+    while neutron_population.size() > 0:
 
-        transmitted = living_neutron - np.size(neutron_position)
-        living_neutron = living_neutron - transmitted
-        passed += transmitted
-        variance_estimator += transmitted
+        # free flight:
+        current_estimator, current_var_estimator = free_flight(neutron_population, thickness, sigma_t)
+        estimator += current_estimator  # I += I_i
+        var_estimator += current_var_estimator - current_estimator**2 / sample_size  # D^2(I) += D^2(I_i)
 
         # better estimator for scattering & absorption + russian roulette?
-        not_dead = (neutron_position >= 0) | interaction_sampling(p_absorption, living_neutron)
-        neutron_position = neutron_position[not_dead]
-        living_neutron = np.size(neutron_position)
+        not_dead = (neutron_population.positions >= 0) | interaction_sampling(p_absorption, neutron_population.size())
+        neutron_population.positions = neutron_population.positions[not_dead]
 
         # splitting strategies
 
         # biasing strategies
-        neutron_angle = np.cos(np.random.uniform(low=0, high=np.pi, size=living_neutron))
+        neutron_population.cosines = np.cos(np.random.uniform(low=0, high=np.pi, size=neutron_population.size()))
 
-    estimation = passed / sample_size
-    #  variance on the estimation D^2(I) = variance_estimation/N
-    variance_estimation = variance_estimator / sample_size - estimation**2  # 1/n sum(h(x_k)^2) - I^2
-    return estimation, variance_estimation
+    return estimator / sample_size, var_estimator / sample_size
 
