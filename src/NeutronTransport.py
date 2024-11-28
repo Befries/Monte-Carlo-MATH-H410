@@ -6,9 +6,9 @@ class NeutronPopulation:
     def __init__(self, pop_size):
         self.positions = np.zeros(pop_size)
         self.cosines = np.ones(pop_size)
-        self.weights = np.ones(pop_size)
+        self.weights = np.ones(pop_size, dtype=np.float64)
 
-        self.contributions = np.zeros(pop_size)
+        self.contributions = np.zeros(pop_size, dtype=np.float64)
         # start of each neutron descendant in the population
         self.descendant_indices = np.arange(0, pop_size, dtype=int)
 
@@ -19,12 +19,11 @@ class NeutronPopulation:
         has_legacy = np.diff(self.descendant_indices, append=self.positions.size) > 0
         cumulative_sizes = np.cumsum(np.add.reduceat(
             living_criteria.astype(int),
-            self.descendant_indices, dtype=int) * has_legacy)
+            np.minimum(self.descendant_indices, self.positions.size - 1), dtype=int) * has_legacy)
         self.descendant_indices = np.insert(cumulative_sizes[:-1], 0, 0)
 
         self.positions = self.positions[living_criteria]
         self.weights = self.weights[living_criteria]
-        self.descendant_indices[self.descendant_indices == self.positions.size] -= 1
 
 
 def free_flight_sampling(proba_per_ul, cos_theta, sample_size) -> np.ndarray:
@@ -35,8 +34,8 @@ def free_flight_sampling(proba_per_ul, cos_theta, sample_size) -> np.ndarray:
     :param sample_size: the size of the random sample needed
     :return: an array of distance randomly sampled according to the free flight PDF
     """
-    sample = np.random.rand(sample_size)
-    return -np.abs(cos_theta) / proba_per_ul * np.log(sample)
+    sample = np.random.uniform(size=sample_size)
+    return - np.log(sample) / proba_per_ul
 
 
 def interaction_sampling(p_absorption, sample_size) -> np.ndarray:
@@ -46,7 +45,7 @@ def interaction_sampling(p_absorption, sample_size) -> np.ndarray:
     :param sample_size: the size of the random sample
     :return: false if an absorption occurred true if it is a scattering
     """
-    sample = np.random.rand(sample_size)
+    sample = np.random.uniform(size=sample_size)
     return sample > p_absorption
 
 
@@ -58,20 +57,20 @@ def free_flight(n_population: NeutronPopulation, wall_thickness, sigma_t) -> (fl
     :param sigma_t:
     :return:
     """
-    initial_pop_size = np.size(n_population.positions)
-    free_flight_distance = free_flight_sampling(sigma_t, n_population.cosines, initial_pop_size)
-
-    n_population.positions = np.sign(n_population.cosines) * free_flight_distance + n_population.positions
+    current_pop_size = n_population.size()
+    free_flight_distance = free_flight_sampling(sigma_t, n_population.cosines, current_pop_size)
+    n_population.positions = n_population.cosines * free_flight_distance + n_population.positions
     alive = n_population.positions <= wall_thickness
 
     # every prime neutron that still has descendants
-    has_legacy = np.diff(n_population.descendant_indices, append=n_population.size()) > 0
+    has_legacy = np.diff(n_population.descendant_indices, append=current_pop_size) > 0
 
+    impact = (~alive).astype(int)
     # had the contribution of the descendants to their ancestor score
     # print(n_population.descendant_indices)
     sub_contrib = np.add.reduceat(
-        n_population.weights * ~alive,
-        n_population.descendant_indices
+        n_population.weights * impact,
+        np.minimum(n_population.descendant_indices, current_pop_size - 1)
     )
     n_population.contributions[has_legacy] += sub_contrib[has_legacy]
 
@@ -79,27 +78,53 @@ def free_flight(n_population: NeutronPopulation, wall_thickness, sigma_t) -> (fl
     n_population.clear_dead_neutron(alive)
 
 
-def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
+def russian_roulette(n_population, threshold):
+    sample = np.random.uniform(size=n_population.size())
+    gun_loaded = n_population.weights < threshold
+    trigger_safe = sample < threshold
+
+    n_population.weights[gun_loaded & trigger_safe] = n_population.weights[gun_loaded & trigger_safe] / threshold
+    return ~gun_loaded | trigger_safe
+
+
+def split(neutron_population, splitting_factor):
+    neutron_population.positions = np.repeat(neutron_population.positions, splitting_factor)
+    neutron_population.weights = np.repeat(neutron_population.weights / splitting_factor, splitting_factor)
+    neutron_population.descendant_indices *= splitting_factor
+
+
+def simulate_transport(sigma_a, sigma_s, thickness, sample_size, splitting_factor, threshold):
     sigma_t = sigma_s + sigma_a
     p_absorption = sigma_a / sigma_t
+    p_scattering = sigma_s / sigma_t
     neutron_population = NeutronPopulation(sample_size)
+
+    iteration = 1
 
     while neutron_population.size() > 0:
 
         # free flight:
         free_flight(neutron_population, thickness, sigma_t)
+
         if neutron_population.size() <= 0:
             break
 
         # better estimator for scattering & absorption + russian roulette?
-        not_dead = (neutron_population.positions >= 0) | interaction_sampling(p_absorption, neutron_population.size())
+        not_dead = ((neutron_population.positions >= 0) &
+                    interaction_sampling(p_absorption, neutron_population.size()) &
+                    russian_roulette(neutron_population, threshold))
+
         neutron_population.clear_dead_neutron(not_dead)
 
         # splitting strategies
+        if iteration % 2 == 0:
+            split(neutron_population, splitting_factor)
 
         # biasing strategies
         neutron_population.cosines = np.cos(np.random.uniform(low=0, high=np.pi, size=neutron_population.size()))
+        iteration += 1
 
     estimator = np.sum(neutron_population.contributions) / sample_size
     var_estimator = np.sum(neutron_population.contributions**2) / sample_size - estimator**2
+    print(neutron_population.contributions)
     return estimator, var_estimator

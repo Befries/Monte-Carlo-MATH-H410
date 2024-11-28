@@ -18,3 +18,7 @@ to process large amount of data (numpy will do it faster)
 $D^2(I) = D^2\left(\frac{1}{N} \sum_k h(n_k)\right)$ where $n_k$ are the incident neutrons,
 $s^2 = \frac{1}{N} \sum_k (h(n_k))^2 - I^2$. Note that we need to know the result for each incident neutron at the end:
 We keep track of their respective descendants to differentiate their contributions.
+
+### Results
+For 1000 initial neutrons and parameter the associated commit
+![result_for_now.png](assets/result_for_now.png)
