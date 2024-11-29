@@ -5,17 +5,10 @@ def free_flight_sampling(proba_per_ul, sample_size):
     return - np.log(np.random.uniform(size=sample_size)) / proba_per_ul
 
 
-def split(positions, weights, m):
-    return np.repeat(positions, m), np.repeat(weights / m, m)
-
-
-def russian_roulette(weights, threshold):
-    sample = np.random.uniform(size=weights.size)
-    gun_loaded = weights < threshold
+def russian_roulette(sample_size, general_weight, threshold):
+    sample = np.random.uniform(size=sample_size)
     trigger_safe = sample < threshold
-
-    weights[gun_loaded & trigger_safe] = weights[gun_loaded & trigger_safe] / threshold
-    return ~gun_loaded | trigger_safe
+    return trigger_safe
 
 
 def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, population_size, split_factor, threshold):
@@ -27,38 +20,35 @@ def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, po
     for i in range(population_size):
         # initial values for the incident beam
         positions = np.zeros(1)
-        weights = np.ones(1)
         director_cosine = np.ones(1)
 
         contribution = 0.0
         collision = 0
+        general_weight = 1.0
 
         while True:
             free_flight = director_cosine * free_flight_sampling(sigma_total, positions.size)
             positions += free_flight
 
-            still_trapped = positions <= wall_thickness
-            contribution += np.sum(weights, where=~still_trapped)
+            transmitted = positions > wall_thickness
+            contribution += np.count_nonzero(transmitted) * general_weight
 
-            weights = weights[still_trapped]
-            positions = positions[still_trapped]
-
-            scattered = np.random.uniform(size=positions.size) >= capture_probability
-            positions = positions[scattered]
-            weights = weights[scattered]
+            not_dead = ~(transmitted | (positions < 0)) & (np.random.uniform(size=positions.size) >= capture_probability)
+            positions = positions[not_dead]
 
             if positions.size == 0:
                 break
 
             if collision % split_frequency == 0:
-                positions, weights = split(positions, weights, split_factor)
+                positions = np.repeat(positions, split_factor)
+                general_weight = general_weight / split_factor
             elif (collision - 1) % split_frequency == 0:
-                not_fucking_dead = russian_roulette(weights, threshold)
-                positions = positions[not_fucking_dead]
-                weights = weights[not_fucking_dead]
+                not_fucking_dead = russian_roulette(positions.size, general_weight, threshold)
+                if general_weight < threshold:
+                    general_weight = general_weight / threshold
+                    positions = positions[not_fucking_dead]
 
             collision += 1
-
             director_cosine = np.cos(np.random.uniform(low=0.0, high=np.pi, size=positions.size))
 
         estimator += contribution
