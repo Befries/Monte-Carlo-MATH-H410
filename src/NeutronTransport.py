@@ -54,6 +54,6 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size):
     return passed / sample_size
 
 
-proba = simulate_transport(500, 200, 0.1, int(1e5))
+proba = simulate_transport(500, 200, 0.1, int(100))
 
 print(proba)
