@@ -3,18 +3,18 @@ import matplotlib.pyplot as plt
 
 import time
 
-from NeutronTransport import simulate_transport
+from NeutronTransport1 import simulate_transport
 
 thickness_tests = 10
 thicknesses = np.linspace(2, 10, thickness_tests)
-pop_size = int(1e3)
+pop_size = int(1e4)
 penetrations = np.empty(thickness_tests)
 variances = np.empty(thickness_tests)
 simulation_time = np.empty(thickness_tests)
 
 for i, thickness in enumerate(thicknesses):
     start = time.perf_counter()
-    penetrations[i], variances[i] = simulate_transport(0.1, 0.2, thickness, pop_size, 20, 0.0001)
+    penetrations[i], variances[i] = simulate_transport(0.3, 0.8, thickness, pop_size)
     simulation_time[i] = time.perf_counter() - start
 
 total_time = np.sum(simulation_time)

@@ -1,3 +1,5 @@
+# ma merde de base, ne s'en inspiré que pour comprendre pouquoi c'estun naufrage
+
 import numpy as np
 
 
@@ -111,8 +113,10 @@ def simulate_transport(sigma_a, sigma_s, thickness, sample_size, splitting_facto
 
         # better estimator for scattering & absorption + russian roulette?
         not_dead = ((neutron_population.positions >= 0) &
-                    interaction_sampling(p_absorption, neutron_population.size()) &
-                    russian_roulette(neutron_population, threshold))
+                    interaction_sampling(p_absorption, neutron_population.size()))
+
+        if iteration % 4 == 0:
+            not_dead = not_dead & russian_roulette(neutron_population, threshold)
 
         neutron_population.clear_dead_neutron(not_dead)
 

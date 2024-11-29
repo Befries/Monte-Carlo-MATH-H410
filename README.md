@@ -19,9 +19,13 @@ Do multiple code file for the different versions of the codes, following the dif
 
 ### Benchmarking
 
-
-
 ### Simulation
+
+#### Simple counter
+You simply need to iterate `population_size` times and follow the life of a neutron of initial position 0:
+- Free flight, but it goes at an angle so its x-displacement is smaller than expected
+- Check for a capture
+- If it is scatter, sample isotropically the angle and start again
 
 #### Variance computation
 $D^2(I) = D^2\left(\frac{1}{N} \sum_k h(n_k)\right)$ where $n_k$ are the incident neutrons,
