@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from NeutronTransport3 import simulate_transport
+from NeutronTransport4 import simulate_transport
 
 
 def test_thicknesses():
