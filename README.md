@@ -82,8 +82,8 @@ $$\int_0^{L-x} A\frac{\Sigma_t}{\Omega_x}\exp\left(-\Sigma_t s / \Omega_x\right)
 \frac{1}{\left(1 - \exp\left(-\Sigma_t (L-x)/ \Omega_x\right)\right)}$$
 
 Then you simply need to inverse the CDF: $F(s) = A(1 - \exp\left(-\Sigma_t s / \Omega_x\right)) = \xi$ which gives
-$$s = F^{-1}(\xi) = - \frac{\Omega_x}{\Sigma_t} \ln\left\{1 -
-\left(1 - \exp[-\Sigma_t (L-x)/ \Omega_x]\right)\xi\right\}$$
+$$s = F^{-1}(\xi) = - \frac{\Omega_x}{\Sigma_t} \ln\left[1 -
+(1 - \exp[-\Sigma_t (L-x)/ \Omega_x])\xi\right]$$
 
 
 #### Antithetic variable
