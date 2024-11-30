@@ -19,6 +19,14 @@ Do multiple code file for the different versions of the codes, following the dif
 
 ### Benchmarking
 
+#### Efficiency
+The efficiency of a monte-carlo simulation can be calculated as $E  = 1 / (s^2 \tau)$ where $s^2$ is the variance of the
+estimation for one incident neutron ($D^2(I)/N$) and $\tau$ the average run time for a neutron (total time $/N$).
+
+For small thickness ($0 \rightarrow 10$), the efficiency is roughly the same for the simple counter and the more
+advanced variant. However, for larger thickness, the simple counter lacks precision for small amounts of incident neutrons
+and isn't able to evaluate the probability.
+
 ### Simulation
 
 #### Simple counter
@@ -33,9 +41,50 @@ We can define a weight for neutrons, but has they all still have the same for th
 updated. To avoid too many unrepresentative neutrons, a russian roulette is performed beforehand.
 
 #### Estimator
+(No speed dependence)
 Each neutron now has a weight associated to it (starting with a single neutron of weight 1).
-Rather than losing neutron in Absorption, we keep all of them but multiply their weights by the scattering probability.
-Also, contribution is now gained by various estimation of the estimator at each point of the simulation
+Rather than losing neutron in Absorption, we keep all of them but multiply their weights by the scattering probability:
+$w_{k+1} = w_k p_{\text{scatter}}$.
+
+Also, contribution is now gained by various estimation of the estimator at each point of the simulation:
+We'd like to estimate the reaction rate
+$$R = \int f(P)\psi(P) dP = \int \phi(P) \delta(x - L)H(\Omega_x) dP$$
+Where $H(\Omega_x)$ is the heaviside function applied to the director cosine (only neutron going forward contributes).
+As $\psi(P) = \Sigma_t \phi(P)$, we can deduce that $f(P) = \frac{1}{\Sigma_t}\delta(x - L)H(\Omega_x)$
+
+The reaction rate is given by the total score of the source:
+$$R = \int Q(P) M_1(P) dP, \qquad M_1(P) = \int T(P \rightarrow P')f(P') dP' + \int L(P \rightarrow P') M_1(P') dP'$$
+The integral over the source Q is simply the sum over the contribution of the incident neutrons 
+($Q(P) = N\delta(x)\delta(\Omega_x - 1)$), the probability is given by the reaction rate normalized by the total source
+meaning $p = R/N$. The first term in the definition of the score is $I_0(P) = \int T(P \rightarrow P')f(P') dP'$, the
+estimation of the score of a neutron that would start from $P$ and have no collision until $P'$.
+
+The transport Kernel $T(P \rightarrow P') = \Sigma_t e^{-\Sigma_t |x-x'|/\Omega_x}\delta(\Omega_x - \Omega_x')$, enables to
+compute this estimator:
+$$I_0(P) = \int T(P \rightarrow P')f(P') dP' = H(\Omega_x)\exp\left(-\Sigma_t \frac{L-x}{\Omega_x}\right)$$
+
+Another way to understand this, is that for a neutron that goes forward (those who have a chance to escape), 
+if we consider all of its possible free flights, the estimator is the fraction that passes the wall. It is given by the 
+integral of the PDF over the escaped portion 
+$$\int_{L}^{\infty} \frac{\Sigma_t}{\Omega}\exp\left(-\Sigma_t \frac{x'-x}{\Omega_x}\right) = 
+\exp\left(-\Sigma_t \frac{x'-x}{\Omega_x}\right), \quad \Omega_x > 0$$
+We can therefore understand this as: "The neutron had a fraction of itself that escaped", the remaining weight of the
+neutron is simply the complementary (fraction that stayed inside). In the same way, instead of eliminating neutron
+to simulate capture, we multiply the weight by the probability to continue the journey, meaning the scattering probability
+
+For Neutrons that goes backward, they have no contribution but we can in the same way keep them and diminish their weight
+by the fraction that would have stayed in: $e^{-\Sigma_t \frac{x}{\Omega_x}}$
+
+Now as we consider that the neutron stays inside (with its diminished weight), we have to sample a free flight accordingly.
+We have to re-normalize the PDF (reasoning for forward neutrons, same for backward neutrons):
+
+$$\int_0^{L-x} A\frac{\Sigma_t}{\Omega_x}\exp\left(-\Sigma_t s / \Omega_x\right) ds \: \Rightarrow \: A =
+\frac{1}{\left(1 - \exp\left(-\Sigma_t (L-x)/ \Omega_x\right)\right)}$$
+
+Then you simply need to inverse the CDF: $F(s) = A(1 - \exp\left(-\Sigma_t s / \Omega_x\right)) = \xi$ which gives
+$$s = F^{-1}(\xi) = - \frac{\Omega_x}{\Sigma_t} \ln\left\{1 -
+\left(1 - \exp\left[-\Sigma_t (L-x)/ \Omega_x\right]\right)\xi\right\}$$
+
 
 #### Antithetic variable
 The uniform sampling is replaced with an antithetic sampling: half is $\xi$ the other $1 - \xi$ (had math proof)
@@ -44,3 +93,12 @@ The uniform sampling is replaced with an antithetic sampling: half is $\xi$ the 
 $D^2(I) = D^2\left(\frac{1}{N} \sum_k h(n_k)\right)$ where $n_k$ are the incident neutrons,
 $s^2 = \frac{1}{N} \sum_k (h(n_k))^2 - I^2$. Note that we need to know the result for each incident neutron at the end:
 We keep track of their respective descendants to differentiate their contributions.
+
+One could remark that the variance evolves in the same way as the transmission probability as a function of the thickness
+This is perfectly normal, consider the simple counter code: the result of each neutron can be $h(n_k) = 0, 1$, therefore
+$(h(n_k))^2 = h(n_k)$.
+
+$$s^2 = \frac{1}{N} \sum_k (h(n_k))^2 - I^2 = \frac{1}{N} \sum_k h(n_k) - I^2 = I - I^2 = I (1 - I)$$
+
+For a small transmission probability, $1 - I \approx 1$, therefore $s^2 \approx I$, which explains this tendency for
+the counter algorithm
