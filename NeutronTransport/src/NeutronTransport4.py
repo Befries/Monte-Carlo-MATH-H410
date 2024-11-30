@@ -22,7 +22,7 @@ def free_flight_estimator(positions, director_cosines, sigma_total, wall_thickne
 
 
 def split(positions, weights, m):
-    return np.repeat(positions, m), np.repeat(weights / m, m)
+    return np.tile(positions, m), np.tile(weights / m, m)
 
 
 def russian_roulette(weights, threshold):
