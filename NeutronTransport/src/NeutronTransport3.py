@@ -7,6 +7,15 @@ def free_flight_sampling(positions, director_cosine, proba_per_ul, rest_estimati
 
 
 def free_flight_estimator(positions, director_cosines, sigma_total, wall_thickness):
+    """
+    This function performs the improved estimator. 
+
+    :positions: current position of the neutron considered
+    :director_cosines: direction of the current neutron 
+    :sigma_total: proba of all interactions per unit lenght 
+    :wall_thickness: wall thickness
+    :return: improved estimator for neutrons going forward 
+    """
     return np.where(director_cosines > 0,
                     np.exp(np.clip(-sigma_total * (wall_thickness - positions) / director_cosines, -np.inf, 709)),
                     np.exp(np.clip(sigma_total * positions / director_cosines, -np.inf, 709))
@@ -14,10 +23,25 @@ def free_flight_estimator(positions, director_cosines, sigma_total, wall_thickne
 
 
 def split(positions, weights, m):
+    """
+    This function splits the neutrons. 
+
+    :positions: position of the splitted neutron
+    :weights: weight of the neutron splitted 
+    :m: splitting factor 
+    :return: position array with additional neutrons resulting from the splitting, weight array with additional neutrons resulting from the splitting
+    """
     return np.tile(positions, m), np.tile(weights / m, m)
 
 
 def russian_roulette(weights, threshold):
+    """
+    This function performs the Russian roulette.
+
+    :weights: weight of the considered neutron
+    :threshold: threshold 
+    :return: False if the Russian roulette is not performed | True if the neutron survives to the Roussian roulette 
+    """
     sample = np.random.uniform(size=weights.size)
     gun_loaded = weights < threshold
     trigger_safe = sample < threshold
