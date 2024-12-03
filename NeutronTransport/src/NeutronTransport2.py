@@ -28,11 +28,18 @@ def russian_roulette(sample_size, general_weight, threshold):
 
 def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, population_size, split_factor, threshold):
     """
-    capture_scattering_ratio, sigma_total, wall_thickness, population_size, split_factor, threshold):
+    This function simulates the neutron transport. 
     
+    :capture_scattering_ratio: ratio between the proba of scattering and proba of capture
+    :sigma_total: proba of any interaction per unit lenght
+    :wall_thickness: wall thickness 
+    :population_size: number of neutrons 
+    :split_factor: split factor 
+    :threshold: threfhold for the Russian roulette  
+    :return: estimation of the transmission probability, the variance associated 
     """
     capture_probability = capture_scattering_ratio / (capture_scattering_ratio + 1)  # = S_c / (S_c + S_s)
-    split_frequency = 4
+    split_frequency = 4 # the frequency at wich the splitting of neutrons is performed 
 
     estimator = 0
     second_estimator = 0  # estimator of the sum of square contributions
@@ -46,12 +53,15 @@ def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, po
         general_weight = 1.0
 
         while True:
+            # propagation of the neutron
             free_flight = director_cosine * free_flight_sampling(sigma_total, positions.size)
             positions += free_flight
 
+            # checking if the neutron escapes from the wall
             transmitted = positions > wall_thickness
             contribution += np.count_nonzero(transmitted) * general_weight
-
+            
+            # eliminating the killed neutrons 
             not_dead = ~(transmitted | (positions < 0)) & (np.random.uniform(size=positions.size) >= capture_probability)
             positions = positions[not_dead]
 
@@ -59,11 +69,11 @@ def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, po
                 break
 
             if collision % split_frequency == 0:
-                if general_weight < threshold:
+                if general_weight < threshold: # checking if the Russian roulette has to be performed 
                     not_fucking_dead = russian_roulette(positions.size, general_weight, threshold)
-                    general_weight = general_weight / threshold
-                    positions = positions[not_fucking_dead]
-                positions = np.repeat(positions, split_factor)
+                    general_weight = general_weight / threshold # adjusting the wait of the surviving neutrons
+                    positions = positions[not_fucking_dead] # killing the neutrons wiwh lost the Russian neutrons
+                positions = np.repeat(positions, split_factor) # splitting the neutrons 
                 general_weight = general_weight / split_factor
 
             collision += 1
