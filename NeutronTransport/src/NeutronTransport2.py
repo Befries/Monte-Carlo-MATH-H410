@@ -2,16 +2,35 @@ import numpy as np
 
 
 def free_flight_sampling(proba_per_ul, sample_size):
+    """
+    This function performs the sample of the free flight probability. 
+    
+    :proba_per_ul: total proba of interaction
+    :return: sampling of the free flight
+    """
     return - np.log(np.random.uniform(size=sample_size)) / proba_per_ul
 
 
 def russian_roulette(sample_size, general_weight, threshold):
+    """
+    This function performs the Russian roulette, 
+    considering that the weight of the neutron is below the threshold.
+    
+    :sample_size: number of neutrons 
+    :general_weight: weight of the neutrons
+    :threshold: threshold 
+    :return: True if the neutron survives to the Russian roulette, False otherwise 
+    """
     sample = np.random.uniform(size=sample_size)
     trigger_safe = sample < threshold
     return trigger_safe
 
 
 def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, population_size, split_factor, threshold):
+    """
+    capture_scattering_ratio, sigma_total, wall_thickness, population_size, split_factor, threshold):
+    
+    """
     capture_probability = capture_scattering_ratio / (capture_scattering_ratio + 1)  # = S_c / (S_c + S_s)
     split_frequency = 4
 
