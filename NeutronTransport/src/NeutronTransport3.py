@@ -2,6 +2,14 @@ import numpy as np
 
 
 def free_flight_sampling(positions, director_cosine, proba_per_ul, rest_estimation):
+    """
+    
+    :positions:
+    :director_cosine:
+    :proba_per_ul: 
+    :rest_estimation: 
+    :return: the free flight 
+    """
     sample = np.random.uniform(size=positions.size)
     return - np.log(1 - rest_estimation * sample) * director_cosine / proba_per_ul
 
@@ -52,12 +60,24 @@ def russian_roulette(weights, threshold):
 
 
 def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, population_size, split_factor, threshold):
+     """
+    This function simulates the neutron transport. 
+    
+    :capture_scattering_ratio: ratio between the proba of scattering and proba of capture
+    :sigma_total: proba of any interaction per unit lenght
+    :wall_thickness: wall thickness 
+    :population_size: number of neutrons 
+    :split_factor: split factor 
+    :threshold: threfhold for the Russian roulette  
+    :return:  improved estimation of the transmission probability, the variance associated 
+    """
     scatter_probability = 1 / (capture_scattering_ratio + 1)
     split_frequency = 4
 
     estimator = 0
     second_estimator = 0  # estimator of the sum of square contributions
     for i in range(population_size):
+        
         # initial values for the incident beam
         positions = np.zeros(1)
         weights = np.ones(1)
@@ -77,8 +97,8 @@ def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, po
 
             if collision % split_frequency == 0:
                 not_fucking_dead = russian_roulette(weights, threshold)
-                positions = positions[not_fucking_dead]
-                weights = weights[not_fucking_dead]
+                positions = positions[not_fucking_dead] # updating the position of the neutrons that survived to the Russian roulette
+                weights = weights[not_fucking_dead] # updating the weights of the neutrons that survived to the Russian roulette
                 positions, weights = split(positions, weights, split_factor)
 
             collision += 1
