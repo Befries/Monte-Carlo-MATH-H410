@@ -26,6 +26,13 @@ def split(positions, weights, m):
 
 
 def russian_roulette(weights, threshold):
+    """
+    This function performs the Russian roulette.
+
+    :weights: weight of the considered neutron
+    :threshold: threshold 
+    :return: False if the Russian roulette is not performed | True if the neutron survives to the Roussian roulette 
+    """
     sample = sample_antithetic(weights.size)
     gun_loaded = weights < threshold
     trigger_safe = sample < threshold
