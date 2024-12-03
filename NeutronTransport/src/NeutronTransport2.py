@@ -40,13 +40,12 @@ def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, po
                 break
 
             if collision % split_frequency == 0:
-                not_fucking_dead = russian_roulette(positions.size, general_weight, threshold)
                 if general_weight < threshold:
+                    not_fucking_dead = russian_roulette(positions.size, general_weight, threshold)
                     general_weight = general_weight / threshold
                     positions = positions[not_fucking_dead]
                 positions = np.repeat(positions, split_factor)
                 general_weight = general_weight / split_factor
-
 
             collision += 1
             director_cosine = np.cos(np.random.uniform(low=0.0, high=np.pi, size=positions.size))

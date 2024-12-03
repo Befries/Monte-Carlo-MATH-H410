@@ -23,7 +23,7 @@ def simulate_transport(capture_scattering_ratio, sigma_total, wall_thickness, po
                 break
 
             # scattering or capture
-            if np.random.uniform() < capture_probability:
+            if np.random.uniform() < capture_probability | position < 0:
                 break
             director_cosine = np.cos(np.random.uniform(low=0.0, high=np.pi))
 
