@@ -22,6 +22,14 @@ def free_flight_estimator(positions, director_cosines, sigma_total, wall_thickne
 
 
 def split(positions, weights, m):
+    """
+    This function splits the neutrons. 
+
+    :positions: position of the splitted neutron
+    :weights: weight of the neutron splitted 
+    :m: splitting factor 
+    :return: position array with additional neutrons resulting from the splitting, weight array with additional neutrons resulting from the splitting
+    """
     return np.tile(positions, m), np.tile(weights / m, m)
 
 
