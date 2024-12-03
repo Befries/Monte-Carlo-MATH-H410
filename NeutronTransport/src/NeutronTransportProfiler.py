@@ -2,12 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from NeutronTransport4 import simulate_transport
+from NeutronTransport5 import simulate_transport
+import NeutronTransport4
 
 
 def test_thicknesses():
-    thickness_tests = 8
-    thicknesses = np.linspace(2, 10, thickness_tests)
+    thickness_tests = 10
+    thicknesses = np.linspace(30, 40, thickness_tests)
     pop_size = int(1e3)
     penetrations = np.empty(thickness_tests)
     variances = np.empty(thickness_tests)
@@ -16,12 +17,10 @@ def test_thicknesses():
     for i, thickness in enumerate(thicknesses):
         start = time.perf_counter()
         penetrations[i], variances[i] = simulate_transport(
-            0.3,
-            0.8,
-            thickness,
+            ((0.3, 0.8, thickness / 10), ()),
             pop_size,
             20,
-            0.0001
+            1e-5
         )
         simulation_time[i] = time.perf_counter() - start
 
@@ -38,8 +37,8 @@ def test_thicknesses():
     axs[0].grid(visible=True, which='both', axis='both')
 
     color = 'tab:red'
-    axs[1].plot(thicknesses, efficiency, color=color)
-    axs[1].set_title("Efficiency and Variance")
+    axs[1].semilogy(thicknesses, efficiency, color=color)
+    axs[1].set_title("Efficiency and standard deviation")
     axs[1].set_ylabel("Efficiency", color=color)
     axs[1].tick_params(axis='y', labelcolor=color)
     axs[1].set_xlabel("thickness [cm]")
@@ -47,9 +46,9 @@ def test_thicknesses():
 
     color = 'tab:blue'
     var_ax = axs[1].twinx()
-    var_ax.scatter(thicknesses, variances, color=color)
+    var_ax.scatter(thicknesses, np.sqrt(variances / pop_size), color=color)
     var_ax.set_yscale('log')
-    var_ax.set_ylabel("Variance s²", color=color)
+    var_ax.set_ylabel("Standard deviation", color=color)
     var_ax.tick_params(axis='y', labelcolor=color)
     var_ax.grid(visible=True, which='both')
 
@@ -100,4 +99,12 @@ def test_split():
     plt.show()
 
 
-test_thicknesses()
+penetrations, variances = simulate_transport(
+    ((0.3, 0.8, 3), (0.5, 0.2, 4), (0.1, 1, 3)),
+    1000,
+    20,
+    1e-5
+)
+
+print(penetrations, variances)
+print(np.sqrt(variances/1000))
