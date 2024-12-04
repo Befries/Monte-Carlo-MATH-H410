@@ -46,11 +46,11 @@ def simulate_transport(wall_properties, population_size, split_factor, threshold
     :param split_frequency: Splits the neutron ever split_frequency collisions
     :return: An estimation of the transmission probability and the variance on a single neutron evaluation
     """
+    # extract properties
     properties = np.asarray(wall_properties)
     sigma_t = properties[:, 1]
     scatter_probability = 1 / (properties[:, 0] + 1)
     thicknesses = properties[:, 2]
-
     layers_amount = np.size(thicknesses)
     optical_attenuation = np.exp(-sigma_t * thicknesses)  # e^(-sigma_t dx)
 
@@ -58,7 +58,8 @@ def simulate_transport(wall_properties, population_size, split_factor, threshold
     post_layer_attenuation = [np.cumprod(optical_attenuation[i + 1:]) for i in range(layers_amount)]
     pre_layer_attenuation = ([np.array([])] +
                              [np.cumprod(optical_attenuation[i - 1::-1])[::-1] for i in range(1, layers_amount)])
-    # padding
+
+    # the accumulation of the attenuation through the following layers
     post_layer_attenuation = np.asarray([np.pad(row, (layers_amount - len(row), 0),
                                                 constant_values=0) for row in post_layer_attenuation])
     pre_layer_attenuation = np.asarray([np.pad(row, (0, layers_amount - len(row)),
@@ -81,19 +82,14 @@ def simulate_transport(wall_properties, population_size, split_factor, threshold
         while positions.size > 0:
 
             # attenuation in the current layer if the neutron would travel to the beginning of the next
-
-            def get_current_layer_attenuation():
-                current_layer_optical_attenuation = np.empty_like(director_cosine)
-                forward_neutron = director_cosine > 0.0
-                backward_neutron = director_cosine <= 0.0
-                current_layer_optical_attenuation[forward_neutron] = (
-                    np.exp(-sigma_t[layers[forward_neutron]] *
-                           (thicknesses[layers[forward_neutron]] - positions[forward_neutron])))
-                current_layer_optical_attenuation[backward_neutron] = (
-                    np.exp(-sigma_t[layers[backward_neutron]] * positions[backward_neutron]))
-                return current_layer_optical_attenuation
-
-            current_layer_optical_attenuation = get_current_layer_attenuation()
+            current_layer_optical_attenuation = np.empty_like(director_cosine)
+            forward_neutron = director_cosine > 0.0
+            backward_neutron = director_cosine <= 0.0
+            current_layer_optical_attenuation[forward_neutron] = (
+                np.exp(-sigma_t[layers[forward_neutron]] *
+                       (thicknesses[layers[forward_neutron]] - positions[forward_neutron])))
+            current_layer_optical_attenuation[backward_neutron] = (
+                np.exp(-sigma_t[layers[backward_neutron]] * positions[backward_neutron]))
 
             # adjust the attenuation possibly undergone accounting the current layer
             def adjust():
@@ -118,13 +114,17 @@ def simulate_transport(wall_properties, population_size, split_factor, threshold
 
             # compute the normalization factor for the layer sampling
             def compute_new_layers():
-                layer_probability = -np.sign(director_cosine)[:, np.newaxis] * np.diff(adjusted_attenuation, prepend=0)
+                layer_probability = np.empty_like(adjusted_attenuation)
+                layer_probability[forward_neutron] = - np.diff(adjusted_attenuation[forward_neutron], prepend=0)
+                layer_probability[backward_neutron, -1] = adjusted_attenuation[backward_neutron, -1]
+                layer_probability[backward_neutron, :-1] = (
+                        adjusted_attenuation[backward_neutron, 1:] - adjusted_attenuation[backward_neutron, :-1])
                 np.add.at(layer_probability, (np.arange(director_cosine.size), layers), 1)
 
                 normalization_factor = 1 / (1 - free_flight_estimate)
                 layer_sampler = sample_antithetic(layer_probability.shape[0])
-                return (layer_sampler[:, np.newaxis] < np.cumsum(layer_probability, axis=1)
-                            * normalization_factor[:, np.newaxis]).argmax(axis=1)
+                return (layer_sampler[:, np.newaxis] < (np.cumsum(layer_probability, axis=1)
+                                                        * normalization_factor[:, np.newaxis])).argmax(axis=1)
                 # neutrons arrive to the new layer if they change
 
             new_layers = compute_new_layers()
@@ -132,21 +132,14 @@ def simulate_transport(wall_properties, population_size, split_factor, threshold
             layers = new_layers
             weights *= scatter_probability[layers] * (1 - free_flight_estimate)
 
-            def change_neutron_layers():
-                positions[layer_variation > 0] = 0
-                back_neutron = layer_variation < 0
-                positions[back_neutron] = thicknesses[layers[back_neutron]]
+            positions[layer_variation > 0] = 0
+            positions[layer_variation < 0] = thicknesses[layers[layer_variation < 0]]
 
-            change_neutron_layers()
-
-            # sampling in the new layer, as if one layer
-            def move_neutron():
-                sample = sample_antithetic(positions.size)
-                moved_neutrons = layer_variation != 0
-                current_layer_optical_attenuation[moved_neutrons] = optical_attenuation[layers[moved_neutrons]]
-                return -np.log(1 - (1 - current_layer_optical_attenuation) * sample) * director_cosine / sigma_t[layers]
-
-            positions += move_neutron()
+            sample = sample_antithetic(positions.size)
+            current_layer_optical_attenuation[layer_variation != 0] = optical_attenuation[layers[layer_variation != 0]]
+            dx = (-np.log(1 - (1 - current_layer_optical_attenuation**(1/np.abs(director_cosine))) * sample)
+                  * director_cosine / sigma_t[layers])
+            positions += dx
 
             if collision % split_frequency == 0:
                 not_fucking_dead = russian_roulette(weights, threshold)
