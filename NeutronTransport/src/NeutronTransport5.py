@@ -68,10 +68,11 @@ def simulate_transport(wall_properties, population_size, split_factor, threshold
 
         while positions.size > 0:
 
-            # attenuation in the current layer if the neutron would travel to the beginning of the next / previous
-            current_layer_optical_attenuation = np.empty_like(director_cosine)
             forward_neutron = director_cosine > 0.0
             backward_neutron = director_cosine <= 0.0
+
+            # attenuation in the current layer if the neutron would travel to the beginning of the next / previous
+            current_layer_optical_attenuation = np.empty_like(director_cosine)
             current_layer_optical_attenuation[forward_neutron] = (
                 np.exp(-sigma_t[layers[forward_neutron]] *
                        (thicknesses[layers[forward_neutron]] - positions[forward_neutron])))
@@ -79,16 +80,13 @@ def simulate_transport(wall_properties, population_size, split_factor, threshold
                 np.exp(-sigma_t[layers[backward_neutron]] * positions[backward_neutron]))
 
             # adjust the attenuation possibly undergone in the voyage between layers
-            def adjust():
-                return np.where(
-                    (director_cosine > 0.0)[:, np.newaxis],
-                    (post_layer_attenuation[layers] * current_layer_optical_attenuation[:, np.newaxis])
-                    ** (1 / director_cosine[:, np.newaxis]),
-                    (pre_layer_attenuation[layers] * current_layer_optical_attenuation[:, np.newaxis])
-                    ** (-1 / director_cosine[:, np.newaxis])
-                )
-
-            adjusted_attenuation = adjust()
+            adjusted_attenuation = np.empty(shape=(director_cosine.size, layers_amount))
+            adjusted_attenuation[forward_neutron] = ((post_layer_attenuation[layers[forward_neutron]] *
+                                                      current_layer_optical_attenuation[forward_neutron, np.newaxis])
+                                                     ** (1 / director_cosine[forward_neutron, np.newaxis]))
+            adjusted_attenuation[backward_neutron] = ((pre_layer_attenuation[layers[backward_neutron]] *
+                                                       current_layer_optical_attenuation[backward_neutron, np.newaxis])
+                                                      ** (-1 / director_cosine[backward_neutron, np.newaxis]))
 
             # estimation of a direct contribution from the current position of a neutron (if it goes forward)
             free_flight_estimate = np.where(
