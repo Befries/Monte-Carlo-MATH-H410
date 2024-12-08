@@ -1,7 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-
-import NeutronTransport5
+import NeutronTransport6
 import NeutronTransport4
 
 
@@ -40,14 +38,33 @@ def uncertain_properties_simulation(
                                         size=layer_amount))
     thickness = thickness / np.sum(thickness) * wall_thickness
     properties = np.asarray((capture_scattering_ratio, sigma_total, thickness)).T
-    print(f"properties: \n {properties}")
-    pop_size = 10000
-    transmission_probability, variance = NeutronTransport5.simulate_transport(properties,
-                                                                              pop_size,
-                                                                              15,
-                                                                              1e-4)
-    print(f"transmission probability {transmission_probability} and standard deviation {np.sqrt(variance / pop_size)}")
+    pop_size = int(1e6)
+    transmission_probability, variance = NeutronTransport6.simulate_transport(properties, pop_size)
+    return transmission_probability, variance
 
+
+t2 = 0
+v2 = 0
+
+average_sample_size = 20
+for i in range(average_sample_size):
+    estimator, variance = uncertain_properties_simulation(
+        0.3,
+        0.05,
+        0.6,
+        0.1,
+        10,
+        1,
+        range(3, 8)
+    )
+    t2 += estimator
+    v2 += variance
+    print(f"done {i}")
+
+t2 /= average_sample_size
+v2 /= average_sample_size
+
+print(f"transmission probability {t2} and standard deviation {np.sqrt(v2 / int(1e6))}")
 
 # returns the expected transition probability for a wall with the central values as parameters
 t1, v1 = NeutronTransport4.simulate_transport(0.3,
@@ -57,13 +74,3 @@ t1, v1 = NeutronTransport4.simulate_transport(0.3,
                                               15,
                                               1e-4)
 print(f"expected transmission probability {t1} and standard deviation {np.sqrt(v1 / 10000)}")
-
-uncertain_properties_simulation(
-    0.3,
-    0.05,
-    0.6,
-    0.1,
-    10,
-    1,
-    range(3, 8)
-)
