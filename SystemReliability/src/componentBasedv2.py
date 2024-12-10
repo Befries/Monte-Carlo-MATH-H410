@@ -15,7 +15,15 @@ def sample_time(failureRate,T):
         t = np.log(failureRate/ksi) * 1/failureRate
     return t
 
-def simulator_transition(M,Y,T):
+def transition(M, ligne_etat, column,T,tmin, column_transition):
+    failureRate = M.item((ligne_etat, column))
+    t = sample_time(failureRate,T)
+    if t < tmin : 
+        tmin = t 
+        column_transition = column
+    return tmin , column_transition
+
+def simulator(M,Y,T):
     """
     This function simulates the transitions of the system. 
 
@@ -28,26 +36,21 @@ def simulator_transition(M,Y,T):
     system_operating = True 
     size = M.shape[0]
     ligne_etat = 0 # initially the state is at line 0 
-    dictionnaire_temps = {} # the key is the transmission time, the content is the new state 
 
     while clock_time < T and ligne_etat < Y :  
         # as long as the mission time is not exced and the system is not failed 
         tmin = 1000
-        for colonne in range(size):
+        column_transition = 10
+        for column in range(size):
 
-            if colonne == ligne_etat : 
+            if column == ligne_etat : 
                 continue # a state can never transition to himself 
-
-            elif M.item((ligne_etat,colonne)) == 0:
+            elif M.item((ligne_etat,column)) == 0:
                 continue # 0 corresponds to impossible transitions 
-
             else :
-                failureRate = M.item((ligne_etat, colonne))
-                t = sample_time(failureRate,T)
-                dictionnaire_temps[t] = colonne
-                if t < tmin : 
-                    tmin = t 
-        ligne_etat = dictionnaire_temps[tmin] # the system transitions 
+                tmin, column_transition = transition(M,ligne_etat, column, T, tmin, column_transition)
+    
+        ligne_etat = column_transition # the system transitions 
         clock_time += tmin 
 
     if ligne_etat >= Y : 
@@ -79,10 +82,11 @@ M = np.matrix([[-3,1,1,1,0,0,0,0],
 """
 
 N = 10000
+#print(simulator_transition(M,Y,Tmission))
 
 counter = 0 
 for i in range(N):
-    if simulator_transition(M,Y,Tmission):
+    if simulator(M,Y,Tmission):
         counter += 1 
 estimation = counter/N
 variance = estimation*(1-estimation)
