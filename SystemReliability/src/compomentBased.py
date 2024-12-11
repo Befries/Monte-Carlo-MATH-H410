@@ -60,11 +60,12 @@ Input variables :
 """
 Tmission = 1 
 Y = 3 # the failure zone (4 is for 2 parallele components )
-
-M = np.matrix([[-2,1,1,0],
-               [1,-2,0,1],
-               [1,0,-2,1],
-               [0,1,1,-2]])
+mu = 1
+lamb = 1
+M = np.matrix([[-lamb-lamb,lamb,lamb,0],
+               [mu,-lamb-mu,0,lamb],
+               [mu,0,-lamb-mu,lamb],
+               [0,mu,mu,-mu-mu]])
 
 """
 testing matrices 
