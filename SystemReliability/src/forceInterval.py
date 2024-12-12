@@ -1,18 +1,26 @@
 import numpy as np 
 import random
 
+"""
+If we force the occurence of the failure in a specific time, then we cannot 
+employ a simple counter anymore. The weight of a failure or succes of a system
+has to be adapted. 
+"""
+
 def sample_time(failureRate,T):
     """
-    This function sample the time of a component. 
+    This function sample the time of a component with a probability density 
+    function forced to a failure in the mission time. 
 
     :failureRate: the failure rate of the component 
+    :T: the mission time 
     :return: the tima at wich the failure occurs 
     """
     ksi = random.uniform(0,1)
     if ksi == 0 : 
         t = T 
     else :
-        t = - np.log(ksi) * 1/failureRate
+        t = - np.log(1 - ksi * np.exp(-failureRate*T)) *1/failureRate
     return t
 
 def transition(M, ligne_etat, column,T,tmin, column_transition):
@@ -23,9 +31,12 @@ def transition(M, ligne_etat, column,T,tmin, column_transition):
         column_transition = column
     return tmin , column_transition
 
+def weight(T,failureRate):
+    return np.exp(-failureRate*T)
+
 def simulator(M,Y,T):
     """
-    This function simulates the transitions of the system. 
+    This function simulates the transitions of the system with the adapyted weight. 
 
     :M: transition rate matrix
     :Y: the failure boundary
@@ -36,6 +47,7 @@ def simulator(M,Y,T):
     system_operating = True # we always start with an operating system
     size = M.shape[0]
     ligne_etat = 0 # initially the state is at line 0 
+    weight = 1 # at the beginning the weight is 1 
 
     while clock_time < T and ligne_etat < Y : # if you want to evaluate the availability you have to erase the second condition
         # as long as the mission time is not exced and the system is not failed 
@@ -48,6 +60,8 @@ def simulator(M,Y,T):
             elif M.item((ligne_etat,column)) == 0:
                 continue # 0 corresponds to impossible transitions 
             else :
+                failureRate = M.item((ligne_etat, column))
+                weight = weight * np.exp(-failureRate*T)
                 tmin, column_transition = transition(M,ligne_etat, column, T, tmin, column_transition)
     
         ligne_etat = column_transition # the system transitions 
@@ -56,7 +70,7 @@ def simulator(M,Y,T):
     if ligne_etat >= Y : 
         system_operating = False
 
-    return system_operating
+    return system_operating, weight
 
 """
 Input variables : 
@@ -70,43 +84,14 @@ M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
 
-"""
-M = np.matrix([[-2,1,1,0],
-               [1,-2,0,1],
-               [1,0,-2,1],
-               [0,1,1,-2]])
 
-testing matrices 
-M = np.matrix([[-3,1,1,1,0,0,0,0],
-                [1,-3,0,0,1,1,0,0],
-                [1,0,-3,0,1,0,1,0],
-                [1,0,0,-3,0,1,1,0],
-                [0,1,1,0,-3,0,0,1],
-                [0,1,0,1,0,-3,0,1],
-                [0,0,1,1,0,0,-3,1],
-                [0,0,0,0,1,1,1,-3]]) # the transition rate matrix
-"""
 N = 1000
 counter = 0 
 for i in range(N):
-    if simulator(M,Y,Tmission):
-        counter +=1
+    operation, weight = simulator(M,Y,Tmission)
+    if operation:
+        counter += weight
 estimation = counter/N
 variance = estimation*(1-estimation)
 print(estimation)
 print(variance)
-"""
-# to estimate over a time window 
-time_window = np.linspace(0.0, Tmission, num=10)
-estimation_window = np.empty([1,10])
-variance_window = np.empty([1,10])
-for t in time_window :
-    j=0 
-    counter = 0 
-    for i in range(N):
-        if simulator(M,Y,t):
-            counter += 1 
-    estimation_window[j] = counter/N
-    variance_window[j] = estimation_window[j]*(1-estimation_window[j])
-    j+=1
-"""
