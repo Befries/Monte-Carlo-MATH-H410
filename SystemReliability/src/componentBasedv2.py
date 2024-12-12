@@ -12,7 +12,7 @@ def sample_time(failureRate,T):
     if ksi == 0 : 
         t = T 
     else :
-        t = np.log(failureRate/ksi) * 1/failureRate
+        t = - np.log(ksi) * 1/failureRate
     return t
 
 def transition(M, ligne_etat, column,T,tmin, column_transition):
@@ -33,7 +33,7 @@ def simulator(M,Y,T):
     :return: True if the system is still operating 
     """
     clock_time = 0 
-    system_operating = True 
+    system_operating = True # we always start with an operating system
     size = M.shape[0]
     ligne_etat = 0 # initially the state is at line 0 
 
@@ -61,15 +61,21 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 1000
+Tmission = 100
 Y = 3 # the failure zone (4 is for 2 parallele components )
+mu = 1
+lamb = 0.0001
+M = np.matrix([[-lamb-lamb,lamb,lamb,0],
+               [mu,-lamb-mu,0,lamb],
+               [mu,0,-lamb-mu,lamb],
+               [0,mu,mu,-mu-mu]])
 
+"""
 M = np.matrix([[-2,1,1,0],
                [1,-2,0,1],
                [1,0,-2,1],
                [0,1,1,-2]])
 
-"""
 testing matrices 
 M = np.matrix([[-3,1,1,1,0,0,0,0],
                 [1,-3,0,0,1,1,0,0],

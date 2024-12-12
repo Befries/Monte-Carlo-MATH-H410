@@ -48,12 +48,12 @@ def variance_estimate(Tmission,M,Y):
     plt.show()
     return
 
-def parameter_impact(Tmission, Y, lamb):
+def parameter_impact(Tmission, Y, mu):
     N = 1000
     space_range = 100
     
     # to evalute the impact of different repair and failure rates
-    parameter_range = np.array([0.01,0.1,1,1.5])
+    parameter_range = np.array([0.001,0.1,10,100])
 
     # to estimate over a time window 
     time_window = np.logspace(0.0, np.log10(Tmission), num=space_range)
@@ -63,7 +63,7 @@ def parameter_impact(Tmission, Y, lamb):
     simulation_time = np.empty(space_range)
 
     for k, parameter in enumerate(parameter_range) : 
-        mu = parameter
+        lamb = parameter # defines wich parameter we will make vary 
         M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
@@ -84,29 +84,33 @@ def parameter_impact(Tmission, Y, lamb):
         print("all simulation run in", total_time, "seconds")
 
     fig, axs = plt.subplots(2)
-    axs[0].plot(time_window, variance_window[0], 'r')
-    axs[0].plot(time_window, variance_window[1], 'b')
-    axs[0].plot(time_window, variance_window[2], 'g')
-    axs[0].plot(time_window, variance_window[3], 'm')
+    axs[0].plot(time_window, variance_window[0], 'r', label="0.001")
+    axs[0].plot(time_window, variance_window[1], 'b', label="0.1")
+    axs[0].plot(time_window, variance_window[2], 'g', label="10")
+    axs[0].plot(time_window, variance_window[3], 'm', label="100")
     axs[0].set_title("variances")
     axs[0].set_yscale('linear')
     axs[0].set_xlabel("time")
     axs[0].set_xscale('log')
     axs[0].grid(visible=True, which='both', axis='both')
+    axs[0].legend()
+
 
     color = 'tab:red'
-    axs[1].plot(time_window, estimation_window[0], 'r')
-    axs[1].plot(time_window, estimation_window[1], 'b')
-    axs[1].plot(time_window, estimation_window[2], 'g')
-    axs[1].plot(time_window, estimation_window[3], 'm')
+    axs[1].plot(time_window, estimation_window[0], 'r', label= "0.001")
+    axs[1].plot(time_window, estimation_window[1], 'b', label= "0.1")
+    axs[1].plot(time_window, estimation_window[2], 'g', label="10")
+    axs[1].plot(time_window, estimation_window[3], 'm', label="100")
     axs[1].set_title("Reliability")
     axs[1].set_ylabel("Reliability", color=color)
     axs[1].tick_params(axis='y', labelcolor=color)
     axs[1].set_xlabel("time")
     axs[1].set_xscale('log')
     axs[1].grid(visible=True, which='both', axis='both')
+    axs[1].legend()
 
     plt.tight_layout()
+    plt.legend
     plt.show()
     return
 
@@ -127,4 +131,4 @@ M = np.matrix([[-2,1,1,0],
 """
 
 #variance_estimate(Tmission,M,Y)
-parameter_impact(Tmission,Y,1)
+parameter_impact(Tmission,Y,10)

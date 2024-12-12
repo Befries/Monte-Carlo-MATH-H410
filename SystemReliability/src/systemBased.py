@@ -12,7 +12,7 @@ def sample_time(failureRate,T):
     if ksi == 0 : 
         t = T 
     else :
-        t = np.log(failureRate/ksi) * 1/failureRate
+       t = - np.log(ksi) * 1/failureRate
     return t
 
 def sample_probability(p):
