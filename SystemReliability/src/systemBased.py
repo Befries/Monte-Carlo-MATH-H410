@@ -16,7 +16,7 @@ def sample_probability(p):
     return np.random.uniform() < p
 
 def transition(M, transitionRate,T,tmin, column, ligne_etat):
-    a = -M.item((0,0))
+    a = -M.item((ligne_etat,ligne_etat))
     t = sample_time(a,T)
     p = transitionRate/a
     transition = sample_probability(p)
@@ -67,7 +67,7 @@ Input variables :
 Tmission = 10
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 0.5
+lamb = 1
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
@@ -99,6 +99,8 @@ counter = 0
 for i in range(N):
     if simulator(M,Y,Tmission):
         counter += 1 
+    else : 
+        print(simulator(M,Y,Tmission))
 estimation = counter/N
 variance = estimation*(1-estimation)
 

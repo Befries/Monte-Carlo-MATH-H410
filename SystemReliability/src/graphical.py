@@ -3,7 +3,6 @@ import random
 import time 
 import matplotlib.pyplot as plt
 from systemBased import simulator
-import systemBased
 
 def variance_estimate(Tmission,M,Y):
     N = 1000
@@ -121,7 +120,7 @@ def parameter_impact(Tmission, Y, mu):
 Tmission = 1000
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 0.5
+lamb = 0.01
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
