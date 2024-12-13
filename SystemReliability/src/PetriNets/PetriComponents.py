@@ -1,6 +1,7 @@
 import random
 import numpy as np
 
+
 class Message:
     def __init__(self, name: str):
         self.name = name
@@ -8,11 +9,11 @@ class Message:
 
 
 class Place:
-    token: int
 
     def __init__(self, name, starting_marking=0):
         self.name = name
         self.starting_marking = starting_marking
+        self.token = starting_marking
 
     def reset_tokens(self):
         """
@@ -22,21 +23,22 @@ class Place:
 
 
 class Transition:
-    upstream_places: list[Place]
-    upstream_weights: list[int]
-
-    downstream_places: list[Place]
-    downstream_weights: list[int]
-
-    inhibitors: list[Place]
-    inhibitor_weights: list[int]
-
-    observed_message: list[tuple[Message, bool]]  # list of message to listen to and the expected value for the firing
-    broadcast_messages: list[tuple[Message, bool]]  # list of message to change and the value to give them
 
     def __init__(self, name: str):
         self.name = name
-        self.stochastic = []  # != None only if the transition is stochastic
+        self.upstream_places: list[Place] = []
+        self.upstream_weights: list[int] = []
+
+        self.downstream_places: list[Place] = []
+        self.downstream_weights: list[int] = []
+
+        self.inhibitors: list[Place] = []
+        self.inhibitor_weights: list[int] = []
+
+        self.observed_message: list[tuple[Message, bool]] = []  # list of message to listen to
+        self.broadcast_messages: list[tuple[Message, bool]] = []  # list of message to change
+
+        self.stochastic: list[float] = []
 
     def add_upstream(self, upstream_place: Place, weight=1):
         self.upstream_places.append(upstream_place)
@@ -51,9 +53,9 @@ class Transition:
     def add_downstream_stochastic(self, downstream_place: Place, transition_probability: float, weight=1):
         if len(self.downstream_places) > len(self.stochastic):
             raise Exception("Deterministic transition, cannot add stochastic sub-places")
-        self.add_downstream(downstream_place, weight)
+        self.downstream_places.append(downstream_place)
+        self.downstream_weights.append(weight)
         self.stochastic.append(transition_probability)
-
 
     def add_inhibitor(self, inhibitor_place: Place, weight=1):
         self.inhibitors.append(inhibitor_place)
@@ -81,7 +83,7 @@ class Transition:
                 return False
         return True
 
-    def sample_firing(self):
+    def sample_firing(self) -> float:
         pass  # overridden in child classes
 
     def pass_tokens(self):
@@ -97,7 +99,6 @@ class Transition:
 
         for down_stream_place, downstream_weight in zip(self.downstream_places, self.downstream_weights):
             down_stream_place.token += downstream_weight
-
 
 
 class InstantTransition(Transition):
