@@ -2,7 +2,7 @@ import numpy as np
 import random
 import time 
 import matplotlib.pyplot as plt
-from componentBasedv2 import simulator
+from forceIntervalv2 import simulator
 import systemBased
 
 def variance_estimate(Tmission,M,Y):
@@ -53,7 +53,7 @@ def parameter_impact(Tmission, Y, mu):
     space_range = 100
     
     # to evalute the impact of different repair and failure rates
-    parameter_range = np.array([0.001,0.1,10,100])
+    parameter_range = np.array([1e-5,0.001,0.01,0.1,])
 
     # to estimate over a time window 
     time_window = np.logspace(0.0, np.log10(Tmission), num=space_range)
@@ -74,8 +74,9 @@ def parameter_impact(Tmission, Y, mu):
             start = time.perf_counter()
             counter = 0 
             for i in range(N):
-                if simulator(M,Y,t):
-                    counter += 1 
+                operation, weight = simulator(M,Y,Tmission)
+                if operation:
+                    counter += weight
             estimation_window[k][j] = counter/N
             variance_window[k][j] = estimation_window[k][j]*(1-estimation_window[k][j])
             simulation_time[j] = time.perf_counter() - start
@@ -84,10 +85,10 @@ def parameter_impact(Tmission, Y, mu):
         print("all simulation run in", total_time, "seconds")
 
     fig, axs = plt.subplots(2)
-    axs[0].plot(time_window, variance_window[0], 'r', label="0.001")
-    axs[0].plot(time_window, variance_window[1], 'b', label="0.1")
-    axs[0].plot(time_window, variance_window[2], 'g', label="10")
-    axs[0].plot(time_window, variance_window[3], 'm', label="100")
+    axs[0].plot(time_window, variance_window[0], 'r', label="1e-5")
+    axs[0].plot(time_window, variance_window[1], 'b', label="0.001")
+    axs[0].plot(time_window, variance_window[2], 'g', label="0.01")
+    axs[0].plot(time_window, variance_window[3], 'm', label="0.1")
     axs[0].set_title("variances")
     axs[0].set_yscale('linear')
     axs[0].set_xlabel("time")
@@ -97,10 +98,10 @@ def parameter_impact(Tmission, Y, mu):
 
 
     color = 'tab:red'
-    axs[1].plot(time_window, estimation_window[0], 'r', label= "0.001")
-    axs[1].plot(time_window, estimation_window[1], 'b', label= "0.1")
-    axs[1].plot(time_window, estimation_window[2], 'g', label="10")
-    axs[1].plot(time_window, estimation_window[3], 'm', label="100")
+    axs[1].plot(time_window, estimation_window[0], 'r', label= "1e-5")
+    axs[1].plot(time_window, estimation_window[1], 'b', label= "0.001")
+    axs[1].plot(time_window, estimation_window[2], 'g', label="0.01")
+    axs[1].plot(time_window, estimation_window[3], 'm', label="0.1")
     axs[1].set_title("Reliability")
     axs[1].set_ylabel("Reliability", color=color)
     axs[1].tick_params(axis='y', labelcolor=color)
@@ -115,10 +116,10 @@ def parameter_impact(Tmission, Y, mu):
     return
 
 
-Tmission = 100
+Tmission = 10
 Y = 3 # the failure zone (3 is for 2 parallele components )
-mu = 2
-lamb = 0.5
+mu = 1
+lamb = 1e-4
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],

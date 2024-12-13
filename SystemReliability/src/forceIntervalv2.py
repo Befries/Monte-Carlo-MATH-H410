@@ -18,10 +18,7 @@ def sample_time(failureRate,T,currentT):
     :return: the tima at wich the failure occurs 
     """
     ksi = random.uniform(0,1)
-    if ksi == 0 : 
-        t = T 
-    else :
-        t = - np.log(1 - ksi * np.exp(-failureRate*(T-currentT))) *1/failureRate
+    t = ksi/ lamb / np.exp(-lamb*currentT) # here the current time corresponds to the last time at wich an evenement appeared 
     return t
 
 def transition(M, ligne_etat, column,T,tmin, column_transition, currentT):
@@ -32,8 +29,8 @@ def transition(M, ligne_etat, column,T,tmin, column_transition, currentT):
         column_transition = column
     return tmin , column_transition
 
-def calculate_weight(T,failureRate,currentT):
-    return np.exp(-failureRate*(T-currentT))
+def calculate_weight(t,failureRate,currentT): #t is the time at wich the evenement appears
+    return np.exp(-failureRate*(t))
 
 def simulator(M,Y,T):
     """
@@ -62,8 +59,9 @@ def simulator(M,Y,T):
                 continue # 0 corresponds to impossible transitions 
             else :
                 failureRate = M.item((ligne_etat, column))
-                weight *=  calculate_weight(T,failureRate, clock_time)
                 tmin, column_transition = transition(M,ligne_etat, column, T, tmin, column_transition, clock_time)
+                weight *=  calculate_weight(tmin,failureRate, clock_time)
+
     
         ligne_etat = column_transition # the system transitions 
         clock_time += tmin 
@@ -76,17 +74,17 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 100
+Tmission = 1000
 Y = 3 # the failure zone (4 is for 2 parallele components )
 mu = 1
-lamb = 1e-5
+lamb = 1e-4
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
 
 
-N = 1000
+N = 10000
 counter = 0 
 variance = 0 # the vraince must be adapted 
 for i in range(N):

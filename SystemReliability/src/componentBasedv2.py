@@ -39,7 +39,7 @@ def simulator(M,Y,T):
 
     while clock_time < T and ligne_etat < Y : # if you want to evaluate the availability you have to erase the second condition
         # as long as the mission time is not exced and the system is not failed 
-        tmin = 1000
+        tmin = 1000 # mettre T ? 
         column_transition = 10
         for column in range(size):
 
@@ -61,7 +61,7 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 1
+Tmission = 1000
 Y = 3 # the failure zone (4 is for 2 parallele components )
 mu = 1
 lamb = 1e-4
@@ -70,23 +70,8 @@ M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
 
-"""
-M = np.matrix([[-2,1,1,0],
-               [1,-2,0,1],
-               [1,0,-2,1],
-               [0,1,1,-2]])
 
-testing matrices 
-M = np.matrix([[-3,1,1,1,0,0,0,0],
-                [1,-3,0,0,1,1,0,0],
-                [1,0,-3,0,1,0,1,0],
-                [1,0,0,-3,0,1,1,0],
-                [0,1,1,0,-3,0,0,1],
-                [0,1,0,1,0,-3,0,1],
-                [0,0,1,1,0,0,-3,1],
-                [0,0,0,0,1,1,1,-3]]) # the transition rate matrix
-"""
-N = 1000
+N = 10000
 counter = 0 
 for i in range(N):
     if simulator(M,Y,Tmission):
@@ -95,18 +80,6 @@ estimation = counter/N
 variance = estimation*(1-estimation)
 print(estimation)
 print(variance)
-"""
-# to estimate over a time window 
-time_window = np.linspace(0.0, Tmission, num=10)
-estimation_window = np.empty([1,10])
-variance_window = np.empty([1,10])
-for t in time_window :
-    j=0 
-    counter = 0 
-    for i in range(N):
-        if simulator(M,Y,t):
-            counter += 1 
-    estimation_window[j] = counter/N
-    variance_window[j] = estimation_window[j]*(1-estimation_window[j])
-    j+=1
-"""
+
+
+
