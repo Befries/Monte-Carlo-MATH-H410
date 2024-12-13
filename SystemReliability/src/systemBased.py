@@ -9,20 +9,18 @@ def sample_time(failureRate,T):
     :return: the tima at wich the failure occurs 
     """
     ksi = random.uniform(0,1)
-    if ksi == 0 : 
-        t = T 
-    else :
-        t = - np.log(ksi) * 1/failureRate
+    t = - np.log(ksi) * 1/failureRate
     return t
 
 def sample_probability(p):
     return np.random.uniform() < p
 
-def transition(M, transitionRate,T,tmin, column_transition, column):
+def transition(M, transitionRate,T,tmin, column, ligne_etat):
     a = -M.item((0,0))
     t = sample_time(a,T)
     p = transitionRate/a
     transition = sample_probability(p)
+    column_transition = ligne_etat
     if transition : 
         tmin = t 
         column_transition = column
@@ -44,8 +42,7 @@ def simulator(M,Y,T):
 
     while clock_time < T and ligne_etat < Y :  
         # as long as the mission time is not exced and the system is not failed 
-        tmin = 1000
-        column_transition = 10
+        tmin = T
         for column in range(size):
 
             if column == ligne_etat : 
@@ -53,7 +50,7 @@ def simulator(M,Y,T):
             elif M.item((ligne_etat,column)) == 0:
                 continue # 0 corresponds to impossible transitions 
             else :
-                passage , tmin, column_transition = transition(M, M.item(ligne_etat,column), T, tmin, column_transition,column)
+                passage , tmin, column_transition = transition(M, M.item(ligne_etat,column), T, tmin,column,ligne_etat)
                 if passage : 
                     break # as soon as a transition occurs we transition
         ligne_etat = column_transition # the system transitions 
@@ -67,10 +64,10 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 1 
-Y = 3 # the failure zone (4 is for 2 parallele components )
+Tmission = 10
+Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 1e-5
+lamb = 0.5
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],

@@ -1,26 +1,25 @@
 import numpy as np 
 import random
 
-def sample_time(failureRate,T):
+def sample_time(failureRate):
     """
     This function sample the time of a component. 
 
-    :failureRate: the failure rate of the component 
-    :return: the tima at wich the failure occurs 
+    :failureRate: the failure/repaire rate of the component 
+    :return: the time at which the failure occurs 
     """
     ksi = random.uniform(0,1)
-    if ksi == 0 : 
-        t = T 
-    else :
-        t = - np.log(ksi) * 1/failureRate
+    t = - np.log(ksi) * 1/failureRate
     return t
 
-def transition(M, ligne_etat, column,T,tmin, column_transition):
+def transition(M, ligne_etat, column,T,tmin):
     failureRate = M.item((ligne_etat, column))
-    t = sample_time(failureRate,T)
+    t = sample_time(failureRate)
     if t < tmin : 
         tmin = t 
         column_transition = column
+    else : 
+        column_transition = ligne_etat 
     return tmin , column_transition
 
 def simulator(M,Y,T):
@@ -30,17 +29,18 @@ def simulator(M,Y,T):
     :M: transition rate matrix
     :Y: the failure boundary
     :T: mission time 
-    :return: True if the system is still operating 
+    :return: True if the system is still operating when the simulation stops 
     """
     clock_time = 0 
     system_operating = True # we always start with an operating system
     size = M.shape[0]
     ligne_etat = 0 # initially the state is at line 0 
 
-    while clock_time < T and ligne_etat < Y : # if you want to evaluate the availability you have to erase the second condition
-        # as long as the mission time is not exced and the system is not failed 
-        tmin = 1000 # mettre T ? 
-        column_transition = 10
+    # if you want to evaluate the availability you have to erase the second condition
+    while clock_time < T and ligne_etat < Y :
+        # as long as the mission time is not exced and the system is not failed the simulation keeps going
+        tmin = T 
+
         for column in range(size):
 
             if column == ligne_etat : 
@@ -48,7 +48,7 @@ def simulator(M,Y,T):
             elif M.item((ligne_etat,column)) == 0:
                 continue # 0 corresponds to impossible transitions 
             else :
-                tmin, column_transition = transition(M,ligne_etat, column, T, tmin, column_transition)
+                tmin, column_transition = transition(M,ligne_etat, column, T, tmin)
     
         ligne_etat = column_transition # the system transitions 
         clock_time += tmin 
@@ -61,10 +61,10 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 1000
-Y = 3 # the failure zone (4 is for 2 parallele components )
+Tmission = 10
+Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 1e-4
+lamb = 0.5
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
