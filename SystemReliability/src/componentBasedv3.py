@@ -13,6 +13,13 @@ def sample_time(failureRate):
     return t
 
 def transition(dicot):
+    """
+    This function adds the possible transitions and its associated times to the dictonnary. 
+    Next the function selectes the transition with the minimum transition time. 
+
+    :dicot: {possible transition : time of the transition}
+    :return: the minimum transition time, the associated transition 
+    """
     sorted_dict = dict(sorted(dicot.items(), key=lambda item: item[1]))
     column_transition = next(iter(sorted_dict.keys()))
     tmin = sorted_dict[column_transition]
@@ -31,10 +38,11 @@ def simulator(M,Y,T):
     system_operating = True # we always start with an operating system
     size = M.shape[0]
     ligne_etat = 0 # initially the state is at line 0 
+
     # if you want to evaluate the availability you have to erase the second condition
     while clock_time < T and ligne_etat < Y :
         # as long as the mission time is not exced and the system is not failed the simulation keeps going
-        dicot = {}
+        dicot = {} # contains all the possible transitions and the associated transition time
         for column in range(size):
             if column == ligne_etat : 
                 continue # a state can never transition to himself 

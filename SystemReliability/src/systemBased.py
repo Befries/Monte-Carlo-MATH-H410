@@ -25,6 +25,7 @@ def simulator(M,Y,T,M_proba):
     :M: transition rate matrix
     :Y: the failure boundary
     :T: mission time 
+    :M_proba: matrix containing the probabilities of transitionning from one state to another
     :return: True if the system is still operating 
     """
     clock_time = 0 
@@ -61,9 +62,9 @@ M_proba = np.asarray([[0,lamb/(lamb+lamb),lamb/(lamb+lamb),0],
                       [mu/(mu+lamb),0,0,lamb/(mu+lamb)],
                       [mu/(mu+lamb),0,0,lamb/(lamb+mu)],
                       [0,mu/(mu+mu), mu/(mu+mu),0]])
-
-
-
+"""
+Running the simulation N times : 
+"""
 N = 10000
 counter = 0 
 for i in range(N):
