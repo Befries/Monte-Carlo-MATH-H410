@@ -12,14 +12,10 @@ def sample_time(failureRate):
     t = - np.log(ksi) * 1/failureRate
     return t
 
-def transition(M, ligne_etat, column,T,tmin):
-    failureRate = M.item((ligne_etat, column))
-    t = sample_time(failureRate)
-    if t < tmin : 
-        tmin = t 
-        column_transition = column
-    else : 
-        column_transition = ligne_etat 
+def transition(dicot):
+    sorted_dict = dict(sorted(dicot.items(), key=lambda item: item[1]))
+    column_transition = next(iter(sorted_dict.keys()))
+    tmin = sorted_dict[column_transition]
     return tmin , column_transition
 
 def simulator(M,Y,T):
@@ -35,21 +31,20 @@ def simulator(M,Y,T):
     system_operating = True # we always start with an operating system
     size = M.shape[0]
     ligne_etat = 0 # initially the state is at line 0 
-
     # if you want to evaluate the availability you have to erase the second condition
     while clock_time < T and ligne_etat < Y :
         # as long as the mission time is not exced and the system is not failed the simulation keeps going
-        tmin = T 
-
+        dicot = {}
         for column in range(size):
-
             if column == ligne_etat : 
                 continue # a state can never transition to himself 
             elif M.item((ligne_etat,column)) == 0:
                 continue # 0 corresponds to impossible transitions 
             else :
-                tmin, column_transition = transition(M,ligne_etat, column, T, tmin)
-    
+                dicot[column] = sample_time(M[ligne_etat,column])
+        
+        tmin, column_transition = transition(dicot)
+
         ligne_etat = column_transition # the system transitions 
         clock_time += tmin 
 
@@ -61,7 +56,7 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 1000
+Tmission = 10
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
 lamb = 1

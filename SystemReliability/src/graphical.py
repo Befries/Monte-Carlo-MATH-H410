@@ -2,7 +2,7 @@ import numpy as np
 import random
 import time 
 import matplotlib.pyplot as plt
-from componentBasedv2 import simulator
+from systemBased import simulator
 
 def variance_estimate(Tmission,M,Y,M_proba):
     N = 1000
@@ -17,7 +17,7 @@ def variance_estimate(Tmission,M,Y,M_proba):
         start = time.perf_counter()
         counter = 0 
         for i in range(N):
-            if simulator(M,Y,t):
+            if simulator(M,Y,t,M_proba):
                 counter += 1 
         estimation_window[j] = counter/N
         variance_window[j] = estimation_window[j]*(1-estimation_window[j])
@@ -117,7 +117,7 @@ def parameter_impact(Tmission, Y, mu):
     return
 
 
-Tmission = 10000
+Tmission = 1000
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
 lamb = 0.1
