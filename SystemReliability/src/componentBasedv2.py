@@ -61,7 +61,7 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 10
+Tmission = 1000
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
 lamb = 1
@@ -80,6 +80,3 @@ estimation = counter/N
 variance = estimation*(1-estimation)
 print(estimation)
 print(variance)
-
-
-

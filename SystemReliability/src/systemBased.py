@@ -12,21 +12,13 @@ def sample_time(failureRate,T):
     t = - np.log(ksi) * 1/failureRate
     return t
 
-def sample_probability(p):
-    return np.random.uniform() < p
+def transition(M_proba, ligne_etat):
+    """
+    This function samples the state the system will transition to. 
+    """
+    return np.random.choice(a=np.arange(M_proba.shape[0]), p=M_proba[ligne_etat, :])
 
-def transition(M, transitionRate,T,tmin, column, ligne_etat):
-    a = -M.item((ligne_etat,ligne_etat))
-    t = sample_time(a,T)
-    p = transitionRate/a
-    transition = sample_probability(p)
-    column_transition = ligne_etat
-    if transition : 
-        tmin = t 
-        column_transition = column
-    return transition, tmin , column_transition
-
-def simulator(M,Y,T):
+def simulator(M,Y,T,M_proba):
     """
     This function simulates the transitions of the system. 
 
@@ -42,19 +34,13 @@ def simulator(M,Y,T):
 
     while clock_time < T and ligne_etat < Y :  
         # as long as the mission time is not exced and the system is not failed 
-        tmin = T
-        for column in range(size):
-
-            if column == ligne_etat : 
-                continue # a state can never transition to himself 
-            elif M.item((ligne_etat,column)) == 0:
-                continue # 0 corresponds to impossible transitions 
-            else :
-                passage , tmin, column_transition = transition(M, M.item(ligne_etat,column), T, tmin,column,ligne_etat)
-                if passage : 
-                    break # as soon as a transition occurs we transition
+        # before each transition we sample the transition time 
+        a = -M[ligne_etat,ligne_etat]
+        t = sample_time(a,T)
+        column_transition = transition(M_proba,ligne_etat)
+            
         ligne_etat = column_transition # the system transitions 
-        clock_time += tmin 
+        clock_time += t
 
     if ligne_etat >= Y : 
         system_operating = False
@@ -68,41 +54,23 @@ Tmission = 10
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
 lamb = 1
-M = np.matrix([[-lamb-lamb,lamb,lamb,0],
+M = np.asarray([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
+M_proba = np.asarray([[0,lamb/(lamb+lamb),lamb/(lamb+lamb),0],
+                      [mu/(mu+lamb),0,0,lamb/(mu+lamb)],
+                      [mu/(mu+lamb),0,0,lamb/(lamb+mu)],
+                      [0,mu/(mu+mu), mu/(mu+mu),0]])
 
-"""
-M = np.matrix([[-2,1,1,0],
-               [1,-2,0,1],
-               [1,0,-2,1],
-               [0,1,1,-2]])
-"""
 
-"""
-testing matrices 
-M = np.matrix([[-3,1,1,1,0,0,0,0],
-                [1,-3,0,0,1,1,0,0],
-                [1,0,-3,0,1,0,1,0],
-                [1,0,0,-3,0,1,1,0],
-                [0,1,1,0,-3,0,0,1],
-                [0,1,0,1,0,-3,0,1],
-                [0,0,1,1,0,0,-3,1],
-                [0,0,0,0,1,1,1,-3]]) # the transition rate matrix
-"""
 
 N = 10000
-#print(simulator_transition(M,Y,Tmission))
-
 counter = 0 
 for i in range(N):
-    if simulator(M,Y,Tmission):
+    if simulator(M,Y,Tmission,M_proba):
         counter += 1 
-    else : 
-        print(simulator(M,Y,Tmission))
 estimation = counter/N
 variance = estimation*(1-estimation)
-
-print("estimation",estimation)
-print("variance", variance)
+print(estimation)
+print(variance)

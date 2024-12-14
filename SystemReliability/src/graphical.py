@@ -2,9 +2,9 @@ import numpy as np
 import random
 import time 
 import matplotlib.pyplot as plt
-from systemBased import simulator
+from componentBasedv2 import simulator
 
-def variance_estimate(Tmission,M,Y):
+def variance_estimate(Tmission,M,Y,M_proba):
     N = 1000
     space_range = 100
     # to estimate over a time window 
@@ -117,14 +117,18 @@ def parameter_impact(Tmission, Y, mu):
     return
 
 
-Tmission = 1000
+Tmission = 10000
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 0.01
+lamb = 0.1
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
+M_proba = np.asarray([[0,lamb/(lamb+lamb),lamb/(lamb+lamb),0],
+                      [mu/(mu+lamb),0,0,lamb/(mu+lamb)],
+                      [mu/(mu+lamb),0,0,lamb/(lamb+mu)],
+                      [0,mu/(mu+mu), mu/(mu+mu),0]])
 """
 M = np.matrix([[-2,1,1,0],
                [1,-2,0,1],
@@ -132,5 +136,5 @@ M = np.matrix([[-2,1,1,0],
                [0,1,1,-2]])
 """
 
-variance_estimate(Tmission,M,Y)
+variance_estimate(Tmission,M,Y,M_proba)
 #parameter_impact(Tmission,Y,1)
