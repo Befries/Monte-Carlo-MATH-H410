@@ -36,8 +36,8 @@ def variance_estimate(Tmission,M,Y,M_proba):
 
     color = 'tab:red'
     axs[1].plot(time_window, estimation_window, color=color)
-    axs[1].set_title("Reliability")
-    axs[1].set_ylabel("Reliability", color=color)
+    axs[1].set_title("Availability")
+    axs[1].set_ylabel("Availability", color=color)
     axs[1].tick_params(axis='y', labelcolor=color)
     axs[1].set_xlabel("time")
     axs[1].set_xscale('log')
@@ -52,12 +52,12 @@ def parameter_impact(Tmission, Y, mu):
     space_range = 100
     
     # to evalute the impact of different repair and failure rates
-    parameter_range = np.array([1e-5,1e-4,0.1])
+    parameter_range = np.asarray([1e-4,0.01])
 
     # to estimate over a time window 
     time_window = np.logspace(0.0, np.log10(Tmission), num=space_range)
-    estimation_window = np.array([np.empty(space_range),np.empty(space_range),np.empty(space_range)])
-    variance_window = np.array([np.empty(space_range),np.empty(space_range),np.empty(space_range)])
+    estimation_window = np.array([np.empty(space_range),np.empty(space_range)])
+    variance_window = np.array([np.empty(space_range),np.empty(space_range)])
 
     simulation_time = np.empty(space_range)
 
@@ -67,13 +67,17 @@ def parameter_impact(Tmission, Y, mu):
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
+        M_proba = np.asarray([[0,lamb/(lamb+lamb),lamb/(lamb+lamb),0],
+                      [mu/(mu+lamb),0,0,lamb/(mu+lamb)],
+                      [mu/(mu+lamb),0,0,lamb/(lamb+mu)],
+                      [0,mu/(mu+mu), mu/(mu+mu),0]])
         
 
         for j, t in enumerate(time_window) :
             start = time.perf_counter()
             counter = 0 
             for i in range(N):
-                operation = simulator(M,Y,Tmission)
+                operation = simulator(M,Y,t)
                 if operation:
                     counter += 1
             estimation_window[k][j] = counter/N
@@ -84,10 +88,10 @@ def parameter_impact(Tmission, Y, mu):
         print("all simulation run in", total_time, "seconds")
 
     fig, axs = plt.subplots(2)
-    axs[0].plot(time_window, variance_window[0], 'r', label="1e-5")
-    axs[0].plot(time_window, variance_window[1], 'b', label="1e-4")
-    axs[0].plot(time_window, variance_window[2], 'g', label="0.1")
-    #axs[0].plot(time_window, variance_window[3], 'm', label="0.01")
+    axs[0].plot(time_window, variance_window[0], 'r', label="1e-4")
+    axs[0].plot(time_window, variance_window[1], 'b', label="0.01")
+    #axs[0].plot(time_window, variance_window[2], 'g', label="0.1")
+    #axs[0].plot(time_window, variance_window[3], 'm', label="0.1")
     #axs[0].plot(time_window, variance_window[4], 'y', label="0.1")
     axs[0].set_title("Variance")
     axs[0].set_yscale('linear')
@@ -98,13 +102,13 @@ def parameter_impact(Tmission, Y, mu):
 
 
     color = 'tab:red'
-    axs[1].plot(time_window, estimation_window[0], 'r', label= "1e-5")
-    axs[1].plot(time_window, estimation_window[1], 'b', label= "1e-4")
-    axs[1].plot(time_window, estimation_window[2], 'g', label="0.1")
-    #axs[1].plot(time_window, estimation_window[3], 'm', label="0.01")
+    axs[1].plot(time_window, estimation_window[0], 'r', label= "1e-4")
+    axs[1].plot(time_window, estimation_window[1], 'b', label= "0.01")
+    #axs[1].plot(time_window, estimation_window[2], 'g', label="0.1")
+    #axs[1].plot(time_window, estimation_window[3], 'm', label="0.1")
     #axs[1].plot(time_window, estimation_window[4], 'y', label="0.1")
-    axs[1].set_title("Reliability")
-    axs[1].set_ylabel("Reliability", color=color)
+    axs[1].set_title("Availability")
+    axs[1].set_ylabel("Availability", color=color)
     axs[1].tick_params(axis='y', labelcolor=color)
     axs[1].set_xlabel("time")
     axs[1].set_xscale('log')
@@ -112,15 +116,15 @@ def parameter_impact(Tmission, Y, mu):
     axs[1].legend(title= "failure/repaire rate ratio")
 
     plt.tight_layout()
-    fig.suptitle("Results for a system based approach")
+    fig.suptitle("Results for a component based approach")
     plt.show()
     return
 
 
-Tmission = 1000
+Tmission = 10
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 0.1
+lamb = 1
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],

@@ -31,7 +31,7 @@ def simulator(M,Y,T,M_proba):
     clock_time = 0 
     system_operating = True 
     ligne_etat = 0 # initially the state is at line 0 
-    while clock_time < T and ligne_etat < Y :  
+    while clock_time < T : #and ligne_etat < Y :  
         # as long as the mission time is not exced and the system is not failed 
         # before each transition we sample the transition time 
 
