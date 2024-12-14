@@ -11,6 +11,10 @@ def build_1comp_petri(index,
                       ):
     """
     build a simple petri net of one component with the two states "working" and "failed"
+    place[0] = working
+    place[1] = failed
+    transition[0] = failure
+    transition[1] = repair
     :param index: an index for the component
     :param reliability: if it follows a reliability design (no repair for this component)
     :param fail_message: (optional) whether to create a message associated with this component failure
@@ -57,26 +61,45 @@ def build_parallel_system(failure_rates, repair_rates, reliability=False, fail_m
     if len(failure_rates) != len(repair_rates):
         raise ValueError("Failure and repair rates must have the same length")
 
-    system, total_failure_message = build_1comp_petri(0, instantaneous=True,
-                                                      element_name="system",
-                                                      fail_message=fail_message,
-                                                      reliability=True)
-    working_system_state = system.places[0]
-    failed_system_state = system.places[1]
-    total_failure_transition = system.transitions[0]
+    if not reliability:
+        system, total_failure_message = build_1comp_petri(0, instantaneous=True,
+                                                          element_name="system",
+                                                          fail_message=fail_message,
+                                                          reliability=True)
+        working_system_state = system.places[0]
+        failed_system_state = system.places[1]
+        total_failure_transition = system.transitions[0]
 
-    for i in range(len(failure_rates)):
-        comp_system, comp_failure_message = build_1comp_petri(i, failure_rate=failure_rates[i],
-                                                              repair_rate=repair_rates[i],
-                                                              fail_message=True)
-        system.merge(comp_system)
+        for i in range(len(failure_rates)):
+            comp_system, comp_failure_message = build_1comp_petri(i, failure_rate=failure_rates[i],
+                                                                  repair_rate=repair_rates[i],
+                                                                  fail_message=True)
+            system.merge(comp_system)
+            total_failure_transition.attach_message(comp_failure_message, True)
 
-        total_failure_transition.attach_message(comp_failure_message, True)
-        if not reliability:
             comeback_transition = InstantTransition(f"comeback due to repair {i}")
             comeback_transition.attach_message(comp_failure_message, False)
             comeback_transition.add_upstream(failed_system_state)
             comeback_transition.add_downstream(working_system_state)
             system.add_transition(comeback_transition)
+        return system, total_failure_message
 
-    return system, total_failure_message
+    system = PetriNetSystem()
+
+    failed_system_state = Place("total failure", 0)
+    total_failure_transition = InstantTransition("total system failure")
+    total_failure_transition.add_downstream(failed_system_state)
+
+    system.add_transition(total_failure_transition)
+    system.add_system_fail_place(failed_system_state)
+
+    if fail_message:
+        total_failure_message = Message("total system failure")
+        total_failure_transition.attach_emitter(total_failure_message, True)
+
+    for i in range(len(failure_rates)):
+        comp_system, _ = build_1comp_petri(i, failure_rates[i], repair_rate=repair_rates[i])
+        system.merge(comp_system)
+        total_failure_transition.add_upstream(comp_system.places[1])
+
+    return system, None

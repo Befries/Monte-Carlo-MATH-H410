@@ -9,11 +9,11 @@ def acquire_characteristics():
     """
     function to test the algorithm
     """
-    system, _ = pse.build_parallel_system([1.0], [1.0], reliability=True)
+    system, _ = pse.build_parallel_system([1.0, 1.0], [1.0, 1.0], reliability=True)
     # simulate system reliability over time for different mission durations
     population_size = 10000
     duration_sample_size = 10
-    duration_samples = np.logspace(-1, 1, duration_sample_size)
+    duration_samples = np.logspace(0, 2, duration_sample_size)
     availability = np.empty_like(duration_samples)
 
     start = time.perf_counter()
@@ -42,4 +42,4 @@ def t_performance():
     plt.show()
 
 
-t_performance()
+acquire_characteristics()
