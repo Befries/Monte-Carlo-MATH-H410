@@ -11,7 +11,7 @@ A benchmarking code to test the simulation at the different levels of developmen
 Do multiple code file for the different versions of the codes, following the different steps:
 1. Simple Monte-Carlo algorithm to compute the transmission probability, without variance reduction techniques
 2. Add splitting strategies (+ russian roulette)
-3. More efficient estimator than a counter
+3. More efficient estimator than a counter and Simple bias
 4. Add antithetic variates (for each sampling: take $\xi$ and $1 -  \xi$)
 5. Add various biasing strategies (sample more the neutron going towards the other side)
 6. Adaptation to variable macroscopic cross-sections (change in absorption-scattering ratio and total cross-section)
@@ -40,7 +40,7 @@ We can define a weight for neutrons, but has they all still have the same for th
 `general_weight`. Every so often (at a given frequency), we split every neutron into several others, and the weight is
 updated. To avoid too many unrepresentative neutrons, a russian roulette is performed beforehand.
 
-#### Estimator
+#### Estimator and Simple bias
 (No speed dependence)
 Each neutron now has a weight associated to it (starting with a single neutron of weight 1).
 Rather than losing neutron in Absorption, we keep all of them but multiply their weights by the scattering probability:
@@ -84,6 +84,9 @@ $$\int_0^{L-x} A\frac{\Sigma_t}{\Omega_x}\exp\left(-\Sigma_t s / \Omega_x\right)
 Then you simply need to inverse the CDF: $F(s) = A(1 - \exp\left(-\Sigma_t s / \Omega_x\right)) = \xi$ which gives
 $$s = F^{-1}(\xi) = - \frac{\Omega_x}{\Sigma_t} \ln\left[1 -
 (1 - \exp[-\Sigma_t (L-x)/ \Omega_x])\xi\right]$$
+
+The change of PDF for the free flight and scattering is a simple bias, we remove the possibility of losing the neutron
+and modify their weight to remove the bias.
 
 
 #### Antithetic variable

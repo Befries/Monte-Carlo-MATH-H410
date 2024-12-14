@@ -73,7 +73,7 @@ class Transition:
         :return: whether the transition is armed and can be traversed
         """
         for message, expected_message in self.observed_message:
-            if message is not expected_message:
+            if message.value is not expected_message:
                 return False
         for inhibitor_place, inhibitor_weight in zip(self.inhibitors, self.inhibitor_weights):
             if inhibitor_place.token >= inhibitor_weight:

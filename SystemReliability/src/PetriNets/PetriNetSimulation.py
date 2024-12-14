@@ -6,6 +6,7 @@ class PetriNetSystem:
     def __init__(self):
         self.places: list[Place] = []  # all the places in the system
         self.transitions: list[Transition] = []  # all the transitions in the system
+        self.messages: list[Message] = []  # all the messages in the system
         self.system_fail_place: Place = None  # the place that causes the system to fail
 
     def add_place(self, place: Place):
@@ -20,11 +21,27 @@ class PetriNetSystem:
     def add_transition(self, transition: Transition):
         self.transitions.append(transition)
 
-    def __sort__(self):
+    def merge(self, other: "PetriNetSystem"):
+        """
+        merge the other petri net with this one to form one system. The total fail place is the fail place of this
+        system.
+        :param other: another petri net
+        """
+        for place in other.places:
+            self.add_place(place)
+        for transition in other.transitions:
+            self.add_transition(transition)
+
+    def __cook__(self):
         """
         puts all the InstantTransition at the start of the list, so they are checked first
         """
         self.transitions.sort(key=lambda a: type(a) is not InstantTransition)
+        if len(self.messages) == 0:
+            for transition in self.transitions:
+                for message, _ in transition.broadcast_messages:
+                    if message not in self.messages:
+                        self.messages.append(message)
 
     def run_simulation(self, duration, sample_size):
         """
@@ -33,7 +50,7 @@ class PetriNetSystem:
         :param sample_size: the amount of token life to simulate
         :return: the reliability / availability (depends on the petri net)
         """
-        self.__sort__()
+        self.__cook__()
         fail_count = 0.0  # total number of system failed at duration
         for i in range(sample_size):
             self.simulate_tokens(duration)
@@ -44,6 +61,8 @@ class PetriNetSystem:
     def simulate_tokens(self, duration):
         for place in self.places:
             place.reset_tokens()
+        for message in self.messages:
+            message.value = False
 
         lifetime = 0.0
         # should update this condition -> if all transitions unarmed -> impossible to continue, therefore end of journey
