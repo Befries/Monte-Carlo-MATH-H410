@@ -1,99 +1,94 @@
 import numpy as np 
 import random
 
-"""
-If we force the occurence of the failure in a specific time, then we cannot 
-employ a simple counter anymore. The weight of a failure or succes of a system
-has to be adapted. 
-The weight and the sample time varies with time 
-"""
-
-def sample_time(failureRate,T,currentT):
+def sample_time(failureRate):
     """
-    This function sample the time of a component with a probability density 
-    function forced to a failure in the mission time. 
+    This function sample the time of a component. 
 
-    :failureRate: the failure rate of the component 
-    :T: the mission time 
-    :return: the tima at wich the failure occurs 
+    :failureRate: the failure/repaire rate of the component 
+    :return: the time at which the failure occurs 
     """
     ksi = random.uniform(0,1)
-    t = ksi/ lamb / np.exp(-lamb*currentT) # here the current time corresponds to the last time at wich an evenement appeared 
+    t = - np.log(ksi) * 1/failureRate
     return t
 
-def transition(M, ligne_etat, column,T,tmin, column_transition, currentT):
-    failureRate = M.item((ligne_etat, column))
-    t = sample_time(failureRate,T,currentT)
-    if t < tmin : 
-        tmin = t 
-        column_transition = column
-    return tmin , column_transition
+def transition(dicot):
+    """
+    This function adds the possible transitions and its associated times to the dictonnary. 
+    Next the function selectes the transition with the minimum transition time. 
 
-def calculate_weight(t,failureRate,currentT): #t is the time at wich the evenement appears
-    return np.exp(-failureRate*(t))
+    :dicot: {possible transition : time of the transition}
+    :return: the minimum transition time, the associated transition 
+    """
+    sorted_dict = dict(sorted(dicot.items(), key=lambda item: item[1]))
+    column_transition = next(iter(sorted_dict.keys()))
+    tmin = sorted_dict[column_transition]
+    return tmin , column_transition
 
 def simulator(M,Y,T):
     """
-    This function simulates the transitions of the system with the adapyted weight. 
+    This function simulates the transitions of the system. 
 
     :M: transition rate matrix
     :Y: the failure boundary
     :T: mission time 
-    :return: True if the system is still operating 
+    :return: True if the system is still operating when the simulation stops 
     """
     clock_time = 0 
     system_operating = True # we always start with an operating system
     size = M.shape[0]
     ligne_etat = 0 # initially the state is at line 0 
-    weight = 1 # at the beginning the weight is 1 
 
-    while clock_time < T and ligne_etat < Y : # if you want to evaluate the availability you have to erase the second condition
-        # as long as the mission time is not exced and the system is not failed 
-        tmin = 1000
-        column_transition = 10
+    # if you want to evaluate the availability you have to erase the second condition
+    while clock_time < T and ligne_etat < Y :
+        # as long as the mission time is not exced and the system is not failed the simulation keeps going
+        dicot = {} # contains all the possible transitions and the associated transition time
         for column in range(size):
-
             if column == ligne_etat : 
                 continue # a state can never transition to himself 
             elif M.item((ligne_etat,column)) == 0:
                 continue # 0 corresponds to impossible transitions 
             else :
-                failureRate = M.item((ligne_etat, column))
-                tmin, column_transition = transition(M,ligne_etat, column, T, tmin, column_transition, clock_time)
-                weight *=  calculate_weight(tmin,failureRate, clock_time)
+                dicot[column] = sample_time(M[ligne_etat,column])
+        
+        tmin, column_transition = transition(dicot)
 
-    
         ligne_etat = column_transition # the system transitions 
         clock_time += tmin 
 
     if ligne_etat >= Y : 
         system_operating = False
 
-    return system_operating, weight
+    return system_operating
 
 """
 Input variables : 
 """
-Tmission = 1000
-Y = 3 # the failure zone (4 is for 2 parallele components )
+Tmission = 10
+Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 1e-4
+mu1 = 1
+lamb = 1
+lamb1 = 1 
+"""
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
-
+"""
+M = np.asarray([[-lamb1, lamb1, 0, 0,0,0],
+                [mu1,-mu1-lamb,0,lamb,0,0],
+                [mu,0,-mu-lamb1,lamb1,0,0],
+                [0,mu,mu1,-mu-mu1-lamb,0,lamb],
+                [0,0,2*mu, 0,-2*mu-lamb1,lamb1],
+                [0,0,0,2*mu,mu1,-mu1-2*mu]])
 
 N = 10000
 counter = 0 
-variance = 0 # the vraince must be adapted 
 for i in range(N):
-    operation, weight = simulator(M,Y,Tmission)
-    if operation:
-        counter += weight
-        variance += weight**2
+    if simulator(M,Y,Tmission):
+        counter +=1
 estimation = counter/N
-variance = variance/N
-variance = variance - estimation**2
+variance = estimation*(1-estimation)
 print(estimation)
 print(variance)

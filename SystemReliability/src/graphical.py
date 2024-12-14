@@ -2,13 +2,13 @@ import numpy as np
 import random
 import time 
 import matplotlib.pyplot as plt
-from systemBased import simulator
+from componentBasedv3 import simulator
 
 def variance_estimate(Tmission,M,Y,M_proba):
     N = 1000
     space_range = 100
     # to estimate over a time window 
-    time_window = np.logspace(0.0, np.log10(Tmission), num=space_range)
+    time_window = np.logspace(-1, np.log10(Tmission), num=space_range)
     estimation_window = np.empty(space_range)
     variance_window = np.empty(space_range)
     simulation_time = np.empty(space_range)
@@ -17,7 +17,7 @@ def variance_estimate(Tmission,M,Y,M_proba):
         start = time.perf_counter()
         counter = 0 
         for i in range(N):
-            if simulator(M,Y,t,M_proba):
+            if simulator(M,Y,t):
                 counter += 1 
         estimation_window[j] = counter/N
         variance_window[j] = estimation_window[j]*(1-estimation_window[j])

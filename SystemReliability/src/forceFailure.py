@@ -1,7 +1,11 @@
 import numpy as np 
 import random
+"""
+This code forces the failure of a component by increasing the failure rate. 
+The estimation is keeped unbaised by multiplying the contribution by a weight.
+"""
 
-def sample_time(failureRate,T):
+def sample_time(failureRate):
     """
     This function sample the time of a component. 
 
@@ -9,114 +13,88 @@ def sample_time(failureRate,T):
     :return: the tima at wich the failure occurs 
     """
     ksi = random.uniform(0,1)
-    if ksi == 0 : 
-        t = T 
-    else :
-        t = - np.log(ksi) * 1/failureRate
+    t = - np.log(ksi) * 1/failureRate
     return t
 
-def sample_probability(p):
-    return np.random.uniform() < p
+def construct_weight(M_proba,newM_proba):
+    result = np.zeros_like(M_proba, dtype=float)
+    np.divide(M_proba, newM_proba, out=result, where=newM_proba != 0)
+    return result
 
-def calculate_weight(m):
-    return 1/m
+def transition(M_proba, ligne_etat):
+    """
+    This function samples the state the system will transition to. 
+    """
+    return np.random.choice(a=np.arange(M_proba.shape[0]), p=M_proba[ligne_etat, :])
 
-def transition(M, transitionRate,T,tmin, column_transition, column, m):
-    a = -M.item((0,0))
-    t = sample_time(a,T)
-    p = transitionRate*m/a
-    transition = sample_probability(p)
-    if transition : 
-        tmin = t 
-        column_transition = column
-    return transition, tmin , column_transition
-
-def simulator(M,Y,T,m):
+def simulator(M,Y,T,M_weight,newM_proba):
     """
     This function simulates the transitions of the system. 
 
     :M: transition rate matrix
     :Y: the failure boundary
     :T: mission time 
+    :M_proba: matrix containing the probabilities of transitionning from one state to another
     :return: True if the system is still operating 
     """
     clock_time = 0 
     system_operating = True 
-    size = M.shape[0]
-    ligne_etat = 0 # initially the state is at line 0 
-    weight = 1 # initially the weight is 1 but it is update each time a bias is introduced
-
+    ligne_etat = 0 # initially the state is at line 0
+    weight = 1 
     while clock_time < T and ligne_etat < Y :  
         # as long as the mission time is not exced and the system is not failed 
-        tmin = T
-        column_transition = 10
-        for column in range(size):
+        # before each transition we sample the transition time 
 
-            if column == ligne_etat : 
-                continue # a state can never transition to himself 
-            elif M.item((ligne_etat,column)) == 0:
-                continue # 0 corresponds to impossible transitions 
-            elif column > ligne_etat : # we will see only failures 
-                passage, tmin, column_transition = transition(M,M.item(ligne_etat,column),T,tmin,column_transition,column,m)
-                if passage : 
-                    weight = weight * calculate_weight(m)
-                    break
-            else :
-                passage , tmin, column_transition = transition(M, M.item(ligne_etat,column), T, tmin, column_transition, column ,1)
-                if passage : 
-                    weight = weight * calculate_weight(m)
-                    break
+        a = -M[ligne_etat,ligne_etat]
+        t = sample_time(a)
+        column_transition = transition(newM_proba,ligne_etat)
+        weight = weight * M_weight[ligne_etat][column_transition]
+
         ligne_etat = column_transition # the system transitions 
-        clock_time += tmin 
+        clock_time += t
 
     if ligne_etat >= Y : 
         system_operating = False
 
-    return weight,  system_operating
+    return system_operating, weight
 
 """
 Input variables : 
 """
-Tmission = 1 
-Y = 3 # the failure zone (4 is for 2 parallele components )
+Tmission = 10
+Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
-lamb = 1e-5
-M = np.matrix([[-lamb-lamb,lamb,lamb,0],
+lamb = 0.001
+newlamb = 0.1
+M = np.asarray([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
+
+def M_proba(lamb,mu): 
+    return np.asarray([[0,lamb/(lamb+lamb),lamb/(lamb+lamb),0],
+                      [mu/(mu+lamb),0,0,lamb/(mu+lamb)],
+                      [mu/(mu+lamb),0,0,lamb/(lamb+mu)],
+                      [0,mu/(mu+mu), mu/(mu+mu),0]])
+
+M_weight = construct_weight(M_proba(lamb,mu),M_proba(newlamb,mu))
+print(M_weight)
 """
-M = np.matrix([[-2,1,1,0],
-               [1,-2,0,1],
-               [1,0,-2,1],
-               [0,1,1,-2]])
+Running the simulation N times : 
 """
 
-"""
-testing matrices 
-M = np.matrix([[-3,1,1,1,0,0,0,0],
-                [1,-3,0,0,1,1,0,0],
-                [1,0,-3,0,1,0,1,0],
-                [1,0,0,-3,0,1,1,0],
-                [0,1,1,0,-3,0,0,1],
-                [0,1,0,1,0,-3,0,1],
-                [0,0,1,1,0,0,-3,1],
-                [0,0,0,0,1,1,1,-3]]) # the transition rate matrix
-"""
 
-N = 10000
-#print(simulator_transition(M,Y,Tmission))
-m = 10
+N = 1000
 counter = 0 
-variance = 0
+variance = 0 
 for i in range(N):
-    weight, operation = simulator(M,Y,Tmission,2) # be careful with the mulitplicative factor 
-    if operation:
+    working, weight = simulator(M,Y,Tmission,M_weight,M_proba(newlamb,mu))
+    if working:
         counter += weight
         variance += weight**2
 estimation = counter/N
-variance = variance/N
-variance = variance - estimation**2
-
-print("estimation",estimation)
-print("variance", variance)
+variance = variance/N - estimation**2
+variance1 = estimation*(1 - estimation)
+print("biased estimator with forced failure : ",estimation)
+print("associated variance1 : ",variance1)
+print("associated variance : ",variance)
