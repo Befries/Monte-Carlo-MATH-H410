@@ -34,14 +34,23 @@ class PetriNetSystem:
 
     def __cook__(self):
         """
-        puts all the InstantTransition at the start of the list, so they are checked first
+        Puts all the InstantTransition at the start of the list, so they are checked first.
+        Register all the messages in the net
         """
         self.transitions.sort(key=lambda a: type(a) is not InstantTransition)
-        if len(self.messages) == 0:
-            for transition in self.transitions:
-                for message, _ in transition.broadcast_messages:
-                    if message not in self.messages:
-                        self.messages.append(message)
+        self.messages = []
+        for transition in self.transitions:
+            for message, _ in transition.broadcast_messages:
+                if message not in self.messages:
+                    self.messages.append(message)
+
+    def clean_data_collectors(self):
+        for place in self.places:
+            place.clean_data()
+        for transition in self.transitions:
+            transition.clean_data()
+        for message in self.messages:
+            message.clean_data()
 
     def run_simulation(self, duration, sample_size):
         """
@@ -51,6 +60,8 @@ class PetriNetSystem:
         :return: the reliability / availability (depends on the petri net)
         """
         self.__cook__()
+        self.clean_data_collectors()
+
         fail_count = 0.0  # total number of system failed at duration
         for i in range(sample_size):
             self.simulate_tokens(duration)
@@ -59,6 +70,7 @@ class PetriNetSystem:
         return fail_count / sample_size  # return the reliability / availability depending on the petri net
 
     def simulate_tokens(self, duration):
+        # reset the net
         for place in self.places:
             place.reset_tokens()
         for message in self.messages:

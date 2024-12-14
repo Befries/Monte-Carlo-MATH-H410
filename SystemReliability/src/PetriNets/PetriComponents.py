@@ -7,6 +7,14 @@ class Message:
         self.name = name
         self.value = False
 
+        # data collectors
+        self.amount_of_broadcast = 0
+        self.time_passed_on = 0.0
+
+    def clean_data(self):
+        self.amount_of_broadcast = 0
+        self.time_passed_on = 0.0
+
 
 class Place:
 
@@ -14,6 +22,12 @@ class Place:
         self.name = name
         self.starting_marking = starting_marking
         self.token = starting_marking
+
+        # data collectors
+        self.mean_sojourn_time = 0.0
+
+    def clean_data(self):
+        self.mean_sojourn_time = 0.0
 
     def reset_tokens(self):
         """
@@ -26,19 +40,25 @@ class Transition:
 
     def __init__(self, name: str):
         self.name = name
-        self.upstream_places: list[Place] = []
-        self.upstream_weights: list[int] = []
+        self.upstream_places: list[Place] = []  # list of upstream places
+        self.upstream_weights: list[int] = []  # list of weights on the arcs from upstream places
 
-        self.downstream_places: list[Place] = []
-        self.downstream_weights: list[int] = []
+        self.downstream_places: list[Place] = []  # list of downstream places
+        self.downstream_weights: list[int] = []  # list of weights on the arc to downstream places
 
-        self.inhibitors: list[Place] = []
-        self.inhibitor_weights: list[int] = []
+        self.inhibitors: list[Place] = []  # list of places the inhibitors arc comes from
+        self.inhibitor_weights: list[int] = []  # list of the weights on inhibitors arcs
 
         self.observed_message: list[tuple[Message, bool]] = []  # list of message to listen to
         self.broadcast_messages: list[tuple[Message, bool]] = []  # list of message to change
 
-        self.stochastic: list[float] = []
+        self.stochastic: list[float] = []  # list of probabilities to if stochastic transition
+
+        # data collectors
+        self.mean_firing_amount = 0
+
+    def clean_data(self):
+        self.mean_firing_amount = 0
 
     def add_upstream(self, upstream_place: Place, weight=1):
         self.upstream_places.append(upstream_place)
