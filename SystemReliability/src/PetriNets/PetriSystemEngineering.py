@@ -82,7 +82,7 @@ def build_parallel_system(failure_rates, repair_rates, reliability=False, fail_m
             comeback_transition.add_upstream(failed_system_state)
             comeback_transition.add_downstream(working_system_state)
             system.add_transition(comeback_transition)
-        return system, total_failure_message
+        return system, None
 
     system = PetriNetSystem()
 

@@ -52,6 +52,16 @@ class PetriNetSystem:
         for message in self.messages:
             message.clean_data()
 
+    def __treat_data_collector__(self, sample_size):
+        for transition in self.transitions:
+            transition.mean_firing_amount /= sample_size
+        for place in self.places:
+            place.mean_sojourn_time /= sample_size
+            place.sojourn_time /= sample_size
+        for message in self.messages:
+            message.mean_time_on /= sample_size
+            message.mean_amount_of_broadcast /= sample_size
+
     def run_simulation(self, duration, sample_size):
         """
         run a simulation of a given time over a sample of given size
@@ -66,7 +76,8 @@ class PetriNetSystem:
         for i in range(sample_size):
             self.simulate_tokens(duration)
             fail_count += 1 if self.system_fail_place.token > 0 else 0
-            # scrap information contained in the different objects
+
+        self.__treat_data_collector__(sample_size)
         return fail_count / sample_size  # return the reliability / availability depending on the petri net
 
     def simulate_tokens(self, duration):
@@ -80,13 +91,21 @@ class PetriNetSystem:
         # should update this condition -> if all transitions unarmed -> impossible to continue, therefore end of journey
         while lifetime < duration:
             fired_transition, time_passed = self.choose_candidate(duration, lifetime)
+
             lifetime += time_passed
+            for place in self.places:
+                place.update_time_on(time_passed)
+            for message in self.messages:
+                message.update_time_on(time_passed)
+
             if fired_transition is None:  # time exceeded or complete fail state
-                # add info based on end situation
                 break
 
             fired_transition.pass_tokens()
             # life cycle of the net
+        for place in self.places:
+            if place.sojourn_time != 0.0:
+                place.mean_sojourn_time += place.sojourn_time / place.amount_of_entering
 
     def choose_candidate(self, duration, lifetime) -> tuple[Transition, float]:
         candidate = None

@@ -8,12 +8,23 @@ class Message:
         self.value = False
 
         # data collectors
-        self.amount_of_broadcast = 0
-        self.time_passed_on = 0.0
+        self.mean_amount_of_broadcast = 0.0
+        self.mean_time_on = 0.0
 
     def clean_data(self):
-        self.amount_of_broadcast = 0
-        self.time_passed_on = 0.0
+        self.mean_amount_of_broadcast = 0.0
+        self.mean_time_on = 0.0
+
+    def broadcast(self, value):
+        """
+        sets the message value, increments the data collector counter
+        """
+        self.value = value
+        self.mean_amount_of_broadcast += 1
+
+    def update_time_on(self, time_passed):
+        if self.value:
+            self.mean_time_on += time_passed
 
 
 class Place:
@@ -24,16 +35,32 @@ class Place:
         self.token = starting_marking
 
         # data collectors
+        self.sojourn_time = 0.0
         self.mean_sojourn_time = 0.0
+        self.amount_of_entering = 0.0
+        self.was_outside = True
 
     def clean_data(self):
         self.mean_sojourn_time = 0.0
+        self.amount_of_entering = 0.0
 
     def reset_tokens(self):
         """
         sets content of the place to its initial amount of tokens
         """
         self.token = self.starting_marking
+        self.sojourn_time = 0.0
+        self.was_outside = True
+
+    def update_time_on(self, time_passed):
+        if self.token > 0:
+            if self.was_outside:
+                self.amount_of_entering += 1
+                self.was_outside = False
+            self.sojourn_time += time_passed
+        else:
+            self.was_outside = True
+
 
 
 class Transition:
@@ -55,10 +82,10 @@ class Transition:
         self.stochastic: list[float] = []  # list of probabilities to if stochastic transition
 
         # data collectors
-        self.mean_firing_amount = 0
+        self.mean_firing_amount = 0.0
 
     def clean_data(self):
-        self.mean_firing_amount = 0
+        self.mean_firing_amount = 0.0
 
     def add_upstream(self, upstream_place: Place, weight=1):
         self.upstream_places.append(upstream_place)
@@ -107,8 +134,12 @@ class Transition:
         pass  # overridden in child classes
 
     def pass_tokens(self):
-        for message, broadcast in self.broadcast_messages:
-            message.value = broadcast
+        """
+        Fires the transition, pass the tokens down and broadcast its messages
+        """
+        self.mean_firing_amount += 1.0
+        for message, broadcast_value in self.broadcast_messages:
+            message.broadcast(broadcast_value)
 
         for upstream_place, upstream_weight in zip(self.upstream_places, self.upstream_weights):
             upstream_place.token -= upstream_weight
