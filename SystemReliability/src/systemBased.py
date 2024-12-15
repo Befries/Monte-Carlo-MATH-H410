@@ -14,7 +14,11 @@ def sample_time(failureRate):
 
 def transition(M_proba, ligne_etat):
     """
-    This function samples the state the system will transition to. 
+    This function samples the state the system will transition to.
+    
+    :M_proba: the matrix containning the probabilities associated to the different transitions
+    :ligne_etat: current state 
+    :return: the state to which the system will transition
     """
     return np.random.choice(a=np.arange(M_proba.shape[0]), p=M_proba[ligne_etat, :])
 

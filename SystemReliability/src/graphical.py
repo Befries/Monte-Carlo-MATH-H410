@@ -2,7 +2,7 @@ import numpy as np
 import random
 import time 
 import matplotlib.pyplot as plt
-from componentBasedv3 import simulator
+from systemBased import simulator
 
 def variance_estimate(Tmission,M,Y,M_proba):
     N = 1000
@@ -47,37 +47,41 @@ def variance_estimate(Tmission,M,Y,M_proba):
     plt.show()
     return
 
-def parameter_impact(Tmission, Y, mu):
+def parameter_impact(Tmission, Y,mu, mu1 ,lamb1 ):
     N = 1000
     space_range = 100
     
     # to evalute the impact of different repair and failure rates
-    parameter_range = np.asarray([1e-4,0.01])
+    parameter_range = np.asarray([1e-3,0.01,0.1])
 
     # to estimate over a time window 
     time_window = np.logspace(0.0, np.log10(Tmission), num=space_range)
-    estimation_window = np.array([np.empty(space_range),np.empty(space_range)])
-    variance_window = np.array([np.empty(space_range),np.empty(space_range)])
+    estimation_window = np.array([np.empty(space_range),np.empty(space_range),np.empty(space_range)])
+    variance_window = np.array([np.empty(space_range),np.empty(space_range),np.empty(space_range)])
 
     simulation_time = np.empty(space_range)
 
     for k, parameter in enumerate(parameter_range) : 
         lamb = parameter # defines wich parameter we will make vary 
-        M = np.matrix([[-lamb-lamb,lamb,lamb,0],
-               [mu,-lamb-mu,0,lamb],
-               [mu,0,-lamb-mu,lamb],
-               [0,mu,mu,-mu-mu]])
-        M_proba = np.asarray([[0,lamb/(lamb+lamb),lamb/(lamb+lamb),0],
-                      [mu/(mu+lamb),0,0,lamb/(mu+lamb)],
-                      [mu/(mu+lamb),0,0,lamb/(lamb+mu)],
-                      [0,mu/(mu+mu), mu/(mu+mu),0]])
+        M = np.asarray([[-lamb1, lamb1, 0, 0,0,0],
+                [mu1,-mu1-lamb,0,lamb,0,0],
+                [mu,0,-mu-lamb1,lamb1,0,0],
+                [0,mu,mu1,-mu-mu1-lamb,0,lamb],
+                [0,0,2*mu, 0,-2*mu-lamb1,lamb1],
+                [0,0,0,2*mu,mu1,-mu1-2*mu]])
+        M_proba = np.asarray([[0, 1, 0, 0,0,0],
+                [mu1/(mu1+lamb),0,0,lamb/(mu1+lamb),0,0],
+                [mu/(mu+lamb1),0,0,lamb1/(mu+lamb1),0,0],
+                [0,mu/(mu+mu1+lamb),mu1/(mu+mu1+lamb),0,0,lamb/(mu+mu1+lamb)],
+                [0,0,2*mu/(2*mu+lamb1), 0,0,lamb1/(2*mu+lamb1)],
+                [0,0,0,2*mu/(2*mu+mu1),mu1/(2*mu+mu1),0]])
         
 
         for j, t in enumerate(time_window) :
             start = time.perf_counter()
             counter = 0 
             for i in range(N):
-                operation = simulator(M,Y,t)
+                operation = simulator(M,Y,t,M_proba)
                 if operation:
                     counter += 1
             estimation_window[k][j] = counter/N
@@ -88,9 +92,9 @@ def parameter_impact(Tmission, Y, mu):
         print("all simulation run in", total_time, "seconds")
 
     fig, axs = plt.subplots(2)
-    axs[0].plot(time_window, variance_window[0], 'r', label="1e-4")
+    axs[0].plot(time_window, variance_window[0], 'r', label="1e-3")
     axs[0].plot(time_window, variance_window[1], 'b', label="0.01")
-    #axs[0].plot(time_window, variance_window[2], 'g', label="0.1")
+    axs[0].plot(time_window, variance_window[2], 'g', label="0.1")
     #axs[0].plot(time_window, variance_window[3], 'm', label="0.1")
     #axs[0].plot(time_window, variance_window[4], 'y', label="0.1")
     axs[0].set_title("Variance")
@@ -102,9 +106,9 @@ def parameter_impact(Tmission, Y, mu):
 
 
     color = 'tab:red'
-    axs[1].plot(time_window, estimation_window[0], 'r', label= "1e-4")
+    axs[1].plot(time_window, estimation_window[0], 'r', label= "1e-3")
     axs[1].plot(time_window, estimation_window[1], 'b', label= "0.01")
-    #axs[1].plot(time_window, estimation_window[2], 'g', label="0.1")
+    axs[1].plot(time_window, estimation_window[2], 'g', label="0.1")
     #axs[1].plot(time_window, estimation_window[3], 'm', label="0.1")
     #axs[1].plot(time_window, estimation_window[4], 'y', label="0.1")
     axs[1].set_title("Availability")
@@ -121,10 +125,14 @@ def parameter_impact(Tmission, Y, mu):
     return
 
 
-Tmission = 10
+Tmission = 100000
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
 lamb = 1
+mu1 = 1
+lamb1 = 1 
+
+"""
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
@@ -134,11 +142,12 @@ M_proba = np.asarray([[0,lamb/(lamb+lamb),lamb/(lamb+lamb),0],
                       [mu/(mu+lamb),0,0,lamb/(lamb+mu)],
                       [0,mu/(mu+mu), mu/(mu+mu),0]])
 """
-M = np.matrix([[-2,1,1,0],
-               [1,-2,0,1],
-               [1,0,-2,1],
-               [0,1,1,-2]])
-"""
+M = np.asarray([[-lamb1, lamb1, 0, 0,0,0],
+                [mu1,-mu1-lamb,0,lamb,0,0],
+                [mu,0,-mu-lamb1,lamb1,0,0],
+                [0,mu,mu1,-mu-mu1-lamb,0,lamb],
+                [0,0,2*mu, 0,-2*mu-lamb1,lamb1],
+                [0,0,0,2*mu,mu1,-mu1-2*mu]])
 
-variance_estimate(Tmission,M,Y,M_proba)
-#parameter_impact(Tmission,Y,1)
+#variance_estimate(Tmission,M,Y,M_proba)
+parameter_impact(Tmission,Y,1,1,1)

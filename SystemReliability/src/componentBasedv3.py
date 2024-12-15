@@ -40,7 +40,7 @@ def simulator(M,Y,T):
     ligne_etat = 0 # initially the state is at line 0 
 
     # if you want to evaluate the availability you have to erase the second condition
-    while clock_time < T : #and ligne_etat < Y :
+    while clock_time < T and ligne_etat < Y :
         # as long as the mission time is not exced and the system is not failed the simulation keeps going
         dicot = {} # contains all the possible transitions and the associated transition time
         for column in range(size):

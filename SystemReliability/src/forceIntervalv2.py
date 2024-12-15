@@ -13,14 +13,14 @@ def sample_time(failureRate, currentT,T):
         t = - np.log(ksi) * 1/failureRate
     else : 
         # cette fonction ne donne que des valeurs de temps négatif ....
-        t = - np.log((2-np.exp(-failureRate*currentT))*np.exp(-ksi) - 1 + np.exp(-failureRate*currentT))/failureRate
+        t = - np.log(1- ksi*np.exp(-failureRate*T))/failureRate
     if t > T :
         t = 0 
     return t
 
 def construct_weight(t,currentT,failureRate,T):
     if t < T and currentT != 0 : 
-        weight = np.exp(-(t)*failureRate)
+        weight = np.exp(-(T)*failureRate)
     elif currentT == 0 : 
         weight = 1
     elif t > T : 
@@ -80,11 +80,11 @@ def simulator(M,Y,T):
 """
 Input variables : 
 """
-Tmission = 10
+Tmission = 1000
 Y = 3 # the failure zone (3 is for 2 parallele components )
 mu = 1
 mu1 = 1
-lamb = 1
+lamb = 1e-6
 lamb1 = 1 
 
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
