@@ -1,16 +1,31 @@
 import numpy as np 
 import random
 
-def sample_time(failureRate):
+def sample_time(failureRate, currentT,T):
     """
-    This function sample the time of a component. 
+    This function sample the time of a component for a modified CDF. 
 
     :failureRate: the failure/repaire rate of the component 
     :return: the time at which the failure occurs 
     """
     ksi = random.uniform(0,1)
-    t = - np.log(ksi) * 1/failureRate
+    if currentT == 0 :
+        t = - np.log(ksi) * 1/failureRate
+    else : 
+        # cette fonction ne donne que des valeurs de temps négatif ....
+        t = - np.log((2-np.exp(-failureRate*currentT))*np.exp(-ksi) - 1 + np.exp(-failureRate*currentT))/failureRate
+    if t > T :
+        t = 0 
     return t
+
+def construct_weight(t,currentT,failureRate,T):
+    if t < T and currentT != 0 : 
+        weight = np.exp(-(t)*failureRate)
+    elif currentT == 0 : 
+        weight = 1
+    elif t > T : 
+        weight = 0 
+    return weight
 
 def transition(dicot):
     """
@@ -37,8 +52,8 @@ def simulator(M,Y,T):
     clock_time = 0 
     system_operating = True # we always start with an operating system
     size = M.shape[0]
-    ligne_etat = 0 # initially the state is at line 0 
-
+    ligne_etat = 0 # initially the state is at line 0
+    weight = 0 
     # if you want to evaluate the availability you have to erase the second condition
     while clock_time < T and ligne_etat < Y :
         # as long as the mission time is not exced and the system is not failed the simulation keeps going
@@ -49,9 +64,10 @@ def simulator(M,Y,T):
             elif M.item((ligne_etat,column)) == 0:
                 continue # 0 corresponds to impossible transitions 
             else :
-                dicot[column] = sample_time(M[ligne_etat,column])
+                dicot[column] = sample_time(M[ligne_etat,column],clock_time,T)
         
         tmin, column_transition = transition(dicot)
+        weight += construct_weight(tmin, clock_time, M[ligne_etat,column_transition],T)
 
         ligne_etat = column_transition # the system transitions 
         clock_time += tmin 
@@ -59,7 +75,7 @@ def simulator(M,Y,T):
     if ligne_etat >= Y : 
         system_operating = False
 
-    return system_operating
+    return system_operating, weight
 
 """
 Input variables : 
@@ -70,11 +86,14 @@ mu = 1
 mu1 = 1
 lamb = 1
 lamb1 = 1 
-"""
+
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
                [0,mu,mu,-mu-mu]])
+"""
+Matrix exercise 2 chap 6 safety :
+"""
 """
 M = np.asarray([[-lamb1, lamb1, 0, 0,0,0],
                 [mu1,-mu1-lamb,0,lamb,0,0],
@@ -82,13 +101,16 @@ M = np.asarray([[-lamb1, lamb1, 0, 0,0,0],
                 [0,mu,mu1,-mu-mu1-lamb,0,lamb],
                 [0,0,2*mu, 0,-2*mu-lamb1,lamb1],
                 [0,0,0,2*mu,mu1,-mu1-2*mu]])
-
+"""
 N = 10000
-counter = 0 
+counter = 0
+variance = 0 
 for i in range(N):
-    if simulator(M,Y,Tmission):
-        counter +=1
+    working, weight = simulator(M,Y,Tmission)
+    if working : 
+        counter += weight
+        variance += weight**2
 estimation = counter/N
-variance = estimation*(1-estimation)
+variance = variance/N - estimation**2
 print(estimation)
 print(variance)

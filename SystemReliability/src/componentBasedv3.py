@@ -70,7 +70,6 @@ mu = 1
 mu1 = 1
 lamb = 1
 lamb1 = 1 
-"""
 M = np.matrix([[-lamb-lamb,lamb,lamb,0],
                [mu,-lamb-mu,0,lamb],
                [mu,0,-lamb-mu,lamb],
@@ -82,6 +81,7 @@ M = np.asarray([[-lamb1, lamb1, 0, 0,0,0],
                 [0,mu,mu1,-mu-mu1-lamb,0,lamb],
                 [0,0,2*mu, 0,-2*mu-lamb1,lamb1],
                 [0,0,0,2*mu,mu1,-mu1-2*mu]])
+"""
 
 N = 10000
 counter = 0 
