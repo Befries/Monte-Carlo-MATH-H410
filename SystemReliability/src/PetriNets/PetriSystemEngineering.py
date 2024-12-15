@@ -32,7 +32,7 @@ def build_1comp_petri(index,
     system.add_system_fail_place(failed)
 
     failure = InstantTransition(f"{element_name} {index} failure") \
-        if instantaneous else SlowTransition(f"{element_name} {index} failure", failure_rate)
+        if instantaneous else ProbabilityRateTransition(f"{element_name} {index} failure", failure_rate)
     system.add_transition(failure)
     failure.add_upstream(working)
     failure.add_downstream(failed)
@@ -46,7 +46,7 @@ def build_1comp_petri(index,
         return system, failure_message
 
     repair = InstantTransition(f"{element_name} {index} repair") \
-        if instantaneous else SlowTransition(f"{element_name} {index} repair", repair_rate)
+        if instantaneous else ProbabilityRateTransition(f"{element_name} {index} repair", repair_rate)
     system.add_transition(repair)
     repair.add_upstream(failed)
     repair.add_downstream(working)

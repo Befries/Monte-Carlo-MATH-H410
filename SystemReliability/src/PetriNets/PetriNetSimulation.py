@@ -8,6 +8,7 @@ class PetriNetSystem:
         self.transitions: list[Transition] = []  # all the transitions in the system
         self.messages: list[Message] = []  # all the messages in the system
         self.system_fail_place: Place = None  # the place that causes the system to fail
+        self.slow_transitions: list[SlowTransition] = []  # keep a list of slow transitions to make them wait separately
 
     def add_place(self, place: Place):
         self.places.append(place)
@@ -21,6 +22,23 @@ class PetriNetSystem:
     def add_transition(self, transition: Transition):
         self.transitions.append(transition)
 
+    def __cook__(self):
+        """
+        Prepare the system before a simulation
+        Puts all the InstantTransition at the start of the list, so they are checked first.
+        Register all the messages in the net.
+        distinguish all slow transitions to make them wait
+        """
+        self.transitions.sort(key=lambda a: type(a) is not InstantTransition)
+        self.messages = []
+        for transition in self.transitions:
+            for message, _ in transition.broadcast_messages:
+                if message not in self.messages:
+                    self.messages.append(message)
+        for transition in self.transitions:
+            if type(transition) is SlowTransition:
+                self.slow_transitions.append(transition)
+
     def merge(self, other: "PetriNetSystem"):
         """
         merge the other petri net with this one to form one system. The total fail place is the fail place of this
@@ -31,18 +49,6 @@ class PetriNetSystem:
             self.add_place(place)
         for transition in other.transitions:
             self.add_transition(transition)
-
-    def __cook__(self):
-        """
-        Puts all the InstantTransition at the start of the list, so they are checked first.
-        Register all the messages in the net
-        """
-        self.transitions.sort(key=lambda a: type(a) is not InstantTransition)
-        self.messages = []
-        for transition in self.transitions:
-            for message, _ in transition.broadcast_messages:
-                if message not in self.messages:
-                    self.messages.append(message)
 
     def clean_data_collectors(self):
         for place in self.places:
@@ -56,13 +62,11 @@ class PetriNetSystem:
         for transition in self.transitions:
             transition.mean_firing_amount /= sample_size
         for place in self.places:
-            place.mean_sojourn_time /= sample_size
-            place.sojourn_time /= sample_size
+            place.treat_data(sample_size)
         for message in self.messages:
-            message.mean_time_on /= sample_size
-            message.mean_amount_of_broadcast /= sample_size
+            message.treat_data(sample_size)
 
-    def run_simulation(self, duration, sample_size):
+    def run_simulation(self, duration, sample_size) -> tuple[float, float]:
         """
         run a simulation of a given time over a sample of given size
         :param duration: the length of the simulation
@@ -78,7 +82,8 @@ class PetriNetSystem:
             fail_count += 1 if self.system_fail_place.token > 0 else 0
 
         self.__treat_data_collector__(sample_size)
-        return fail_count / sample_size  # return the reliability / availability depending on the petri net
+        estimation = fail_count / sample_size
+        return estimation, estimation * (1 - estimation)
 
     def simulate_tokens(self, duration):
         # reset the net
@@ -86,6 +91,8 @@ class PetriNetSystem:
             place.reset_tokens()
         for message in self.messages:
             message.reset()
+        for slow_transition in self.slow_transitions:
+            slow_transition.reset_timer()
 
         lifetime = 0.0
         # should update this condition -> if all transitions unarmed -> impossible to continue, therefore end of journey
@@ -93,6 +100,8 @@ class PetriNetSystem:
             fired_transition, time_passed = self.choose_candidate(duration, lifetime)
 
             lifetime += time_passed
+            for slow_transition in self.slow_transitions:
+                slow_transition.wait(time_passed)
             for place in self.places:
                 place.update_time_on(time_passed)
             for message in self.messages:
@@ -104,8 +113,11 @@ class PetriNetSystem:
             fired_transition.pass_tokens()
             # life cycle of the net
         for place in self.places:
-            if place.sojourn_time != 0.0:
-                place.mean_sojourn_time += place.sojourn_time / place.amount_of_entering
+            place.add_experience()
+        for message in self.messages:
+            message.add_experience()
+        for transition in self.transitions:
+            transition.add_experience()
 
     def choose_candidate(self, duration, lifetime) -> tuple[Transition, float]:
         candidate = None
