@@ -103,3 +103,28 @@ def build_parallel_system(failure_rates, repair_rates, reliability=False, fail_m
         total_failure_transition.add_upstream(comp_system.places[1])
 
     return system, None
+
+
+def build_parallel_inhibitor(failure_rates, repair_rates,):
+    """
+    just to test that the availability system can work with inhibitors
+    """
+    system, total_failure_message = build_1comp_petri(0, instantaneous=True,
+                                                      element_name="system",
+                                                      reliability=True)
+    working_system_state = system.places[0]
+    failed_system_state = system.places[1]
+    total_failure_transition = system.transitions[0]
+
+    for i in range(len(failure_rates)):
+        comp_system, comp_failure_message = build_1comp_petri(i, failure_rate=failure_rates[i],
+                                                              repair_rate=repair_rates[i])
+        system.merge(comp_system)
+        total_failure_transition.add_inhibitor(comp_system.places[0])
+
+        comeback_transition = InstantTransition(f"comeback due to repair {i}")
+        comeback_transition.add_inhibitor(comp_system.places[1])
+        comeback_transition.add_upstream(failed_system_state)
+        comeback_transition.add_downstream(working_system_state)
+        system.add_transition(comeback_transition)
+    return system

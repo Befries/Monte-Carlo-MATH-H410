@@ -22,6 +22,9 @@ class Message:
         self.value = value
         self.mean_amount_of_broadcast += 1
 
+    def reset(self):
+        self.value = False
+
     def update_time_on(self, time_passed):
         if self.value:
             self.mean_time_on += time_passed
@@ -62,19 +65,15 @@ class Place:
             self.was_outside = True
 
 
-
 class Transition:
 
     def __init__(self, name: str):
         self.name = name
-        self.upstream_places: list[Place] = []  # list of upstream places
-        self.upstream_weights: list[int] = []  # list of weights on the arcs from upstream places
+        self.upstream_places: list[tuple[Place, int]] = []  # list of upstream places with the weight of their arc
 
-        self.downstream_places: list[Place] = []  # list of downstream places
-        self.downstream_weights: list[int] = []  # list of weights on the arc to downstream places
+        self.downstream_places: list[tuple[Place, int]] = []  # list of downstream places with the weight of their arc
 
-        self.inhibitors: list[Place] = []  # list of places the inhibitors arc comes from
-        self.inhibitor_weights: list[int] = []  # list of the weights on inhibitors arcs
+        self.inhibitors: list[tuple[Place, int]] = []  # list of places the inhibitors arc comes from and their weights
 
         self.observed_message: list[tuple[Message, bool]] = []  # list of message to listen to
         self.broadcast_messages: list[tuple[Message, bool]] = []  # list of message to change
@@ -88,25 +87,21 @@ class Transition:
         self.mean_firing_amount = 0.0
 
     def add_upstream(self, upstream_place: Place, weight=1):
-        self.upstream_places.append(upstream_place)
-        self.upstream_weights.append(weight)
+        self.upstream_places.append((upstream_place, weight))
 
     def add_downstream(self, downstream_place: Place, weight=1):
         if len(self.stochastic) > 0:
             raise Exception("Stochastic transition, cannot add simple sub-places")
-        self.downstream_places.append(downstream_place)
-        self.downstream_weights.append(weight)
+        self.downstream_places.append((downstream_place, weight))
 
     def add_downstream_stochastic(self, downstream_place: Place, transition_probability: float, weight=1):
         if len(self.downstream_places) > len(self.stochastic):
             raise Exception("Deterministic transition, cannot add stochastic sub-places")
-        self.downstream_places.append(downstream_place)
-        self.downstream_weights.append(weight)
+        self.downstream_places.append((downstream_place, weight))
         self.stochastic.append(transition_probability)
 
     def add_inhibitor(self, inhibitor_place: Place, weight=1):
-        self.inhibitors.append(inhibitor_place)
-        self.inhibitor_weights.append(weight)
+        self.inhibitors.append((inhibitor_place, weight))
 
     def attach_message(self, message: Message, expected_value: bool):
         self.observed_message.append((message, expected_value))
@@ -122,10 +117,10 @@ class Transition:
         for message, expected_message in self.observed_message:
             if message.value is not expected_message:
                 return False
-        for inhibitor_place, inhibitor_weight in zip(self.inhibitors, self.inhibitor_weights):
+        for inhibitor_place, inhibitor_weight in self.inhibitors:
             if inhibitor_place.token >= inhibitor_weight:
                 return False
-        for upstream_place, upstream_weight in zip(self.upstream_places, self.upstream_weights):
+        for upstream_place, upstream_weight in self.upstream_places:
             if upstream_place.token < upstream_weight:
                 return False
         return True
@@ -141,14 +136,15 @@ class Transition:
         for message, broadcast_value in self.broadcast_messages:
             message.broadcast(broadcast_value)
 
-        for upstream_place, upstream_weight in zip(self.upstream_places, self.upstream_weights):
+        for upstream_place, upstream_weight in self.upstream_places:
             upstream_place.token -= upstream_weight
 
         if len(self.stochastic) > 0:
-            random.choices(list(zip(self.downstream_places, self.downstream_weights)), weights=self.stochastic)
+            stochastic_place = random.choices(self.downstream_places, weights=self.stochastic)
+            stochastic_place[0].token += stochastic_place[1]
             return
 
-        for down_stream_place, downstream_weight in zip(self.downstream_places, self.downstream_weights):
+        for down_stream_place, downstream_weight in self.downstream_places:
             down_stream_place.token += downstream_weight
 
 

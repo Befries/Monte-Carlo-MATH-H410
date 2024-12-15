@@ -85,7 +85,7 @@ class PetriNetSystem:
         for place in self.places:
             place.reset_tokens()
         for message in self.messages:
-            message.value = False
+            message.reset()
 
         lifetime = 0.0
         # should update this condition -> if all transitions unarmed -> impossible to continue, therefore end of journey
