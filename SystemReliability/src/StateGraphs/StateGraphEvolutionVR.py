@@ -27,7 +27,7 @@ def simulate_state_graph_evolution_system_based(state_graph_matrix: np.ndarray,
     biased_rates_inv, biased_pdf = treat(biased_matrix)
 
     corrective_factor_exp = biased_rates_inv / total_rates_inv
-    delta_rates = biased_rates_inv - total_rates_inv
+    delta_rates = 1/biased_rates_inv - 1/total_rates_inv
 
     corrective_factor_discrete = pdf / biased_pdf
 
