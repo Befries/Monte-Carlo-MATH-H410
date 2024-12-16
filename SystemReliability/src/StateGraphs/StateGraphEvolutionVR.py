@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from math import exp
 from StateGraphEvolution import check_matrix
@@ -27,15 +29,15 @@ def simulate_state_graph_evolution_system_based(state_graph_matrix: np.ndarray,
     biased_rates_inv, biased_pdf = treat(biased_matrix)
 
     corrective_factor_exp = biased_rates_inv / total_rates_inv
-    delta_rates = 1/biased_rates_inv - 1/total_rates_inv
+    delta_rates = 1 / biased_rates_inv - 1 / total_rates_inv
 
     corrective_factor_discrete = pdf / biased_pdf
 
     biased_cdf = np.cumsum(biased_pdf, axis=1)
 
     max_duration_idx = len(durations)
-    working_at = np.zeros_like(durations)
-    square_working_at = np.zeros_like(durations)
+    failed_at = np.zeros_like(durations)
+    square_failed_at = np.zeros_like(durations)
 
     for i in range(sample_size):
         state = 0
@@ -50,8 +52,8 @@ def simulate_state_graph_evolution_system_based(state_graph_matrix: np.ndarray,
 
             while current_duration_idx < max_duration_idx and clock >= durations[current_duration_idx]:
                 if not working:
-                    working_at[current_duration_idx] += weight
-                    square_working_at[current_duration_idx] += weight ** 2
+                    failed_at[current_duration_idx] += weight
+                    square_failed_at[current_duration_idx] += weight ** 2
                 current_duration_idx += 1
             if current_duration_idx >= max_duration_idx:
                 break
@@ -64,11 +66,57 @@ def simulate_state_graph_evolution_system_based(state_graph_matrix: np.ndarray,
             state = next_state
             working = state < fail_idx
             if reliability and not working:
-                working_at[current_duration_idx:] += weight
-                square_working_at[current_duration_idx:] += weight ** 2
+                failed_at[current_duration_idx:] += weight
+                square_failed_at[current_duration_idx:] += weight ** 2
                 break
 
-    estimation = 1 - working_at / sample_size
-    return estimation, square_working_at / sample_size - (working_at/sample_size) ** 2
+    estimation = 1 - failed_at / sample_size
+    return estimation, square_failed_at / sample_size - (failed_at / sample_size) ** 2
 
 
+def simulate_state_graph_reliability_cropped_pdf(state_graph_matrix: np.ndarray,
+                                                 fail_idx,
+                                                 sample_size,
+                                                 durations,
+                                                 inform=False
+                                                 ):
+    check_matrix(state_graph_matrix)
+    # modify the state_graph_matrix based on the bias
+    # deduce weights to multiply
+
+    total_rates_inv, pdf = treat(state_graph_matrix)
+    total_rates = 1 / total_rates_inv
+
+    cdf = np.cumsum(pdf, axis=1)
+
+    failed_at = np.zeros_like(durations)
+    square_failed_at = np.zeros_like(durations)
+
+    for i, duration in enumerate(durations):
+        start = time.perf_counter()
+        states = np.zeros(sample_size, dtype=np.int32)
+        weights = np.ones(sample_size)
+        clocks = np.zeros(sample_size)
+        while states.size > 0:
+            normalizer = 1 - np.exp(-total_rates[states] * (duration - clocks))
+            clocks += - total_rates_inv[states] * np.log(1 - normalizer * np.random.rand(states.size))
+            weights *= normalizer
+
+            states = np.array([
+                np.searchsorted(cdf_row, random_value)
+                for cdf_row, random_value in zip(cdf[states], np.random.rand(states.size))
+            ])
+
+            failed = states >= fail_idx
+            failed_at[i] += np.sum(weights[failed])
+            square_failed_at[i] += np.sum(weights[failed] ** 2)
+
+            states = states[~failed]
+            weights = weights[~failed]
+            clocks = clocks[~failed]
+
+        if inform:
+            print(time.perf_counter() - start)
+
+    estimation = 1 - failed_at / sample_size
+    return estimation, square_failed_at / sample_size - (failed_at / sample_size) ** 2
