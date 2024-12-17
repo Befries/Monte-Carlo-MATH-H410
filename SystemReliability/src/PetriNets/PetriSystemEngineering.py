@@ -105,7 +105,7 @@ def build_parallel_system(failure_rates, repair_rates, reliability=False, fail_m
     return system, None
 
 
-def build_parallel_inhibitor(failure_rates, repair_rates,):
+def build_parallel_inhibitor(failure_rates, repair_rates, ):
     """
     just to test that the availability system can work with inhibitors
     """
@@ -127,4 +127,40 @@ def build_parallel_inhibitor(failure_rates, repair_rates,):
         comeback_transition.add_upstream(failed_system_state)
         comeback_transition.add_downstream(working_system_state)
         system.add_transition(comeback_transition)
+    return system
+
+
+def build_two_comp_passive_redundancy_reliability(failure_rate1, failure_rate2, repair_rate1):
+    system = PetriNetSystem()
+    primary_system, f1_failure = build_1comp_petri(1, fail_message=True, failure_rate=failure_rate1,
+                                                   repair_rate=repair_rate1)
+    system.merge(primary_system)
+    second_system, _ = build_1comp_petri(2, failure_rate=failure_rate2, reliability=True)
+    system.merge(second_system)
+    second_system.places[0].starting_marking = 0
+
+    standby_place = Place("standby", 1)
+    system.add_place(standby_place)
+
+    start_standby_transition = InstantTransition("start standby unit")
+    system.add_transition(start_standby_transition)
+    start_standby_transition.add_upstream(standby_place)
+    start_standby_transition.add_downstream(second_system.places[0])
+    start_standby_transition.attach_message(f1_failure, True)
+
+    return_to_standby_transition = InstantTransition("return to standby")
+    system.add_transition(return_to_standby_transition)
+    return_to_standby_transition.add_upstream(second_system.places[0])
+    return_to_standby_transition.add_downstream(standby_place)
+    return_to_standby_transition.attach_message(f1_failure, False)
+
+    end_transition = InstantTransition("end")
+    system.add_transition(end_transition)
+    end_transition.add_upstream(primary_system.places[1])
+    end_transition.add_upstream(second_system.places[1])
+
+    end_place = Place("system failure")
+    system.add_system_fail_place(end_place)
+    end_transition.add_downstream(end_place)
+
     return system
