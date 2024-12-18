@@ -77,13 +77,15 @@ class PetriNetSystem:
         self.clean_data_collectors()
 
         fail_count = 0.0  # total number of system failed at duration
+        var_count = 0.0  # total number of
         for i in range(sample_size):
             self.simulate_tokens(duration)
-            fail_count += 1 if self.system_fail_place.token > 0 else 0
+            fail_count += self.system_fail_place.token
+            var_count += self.system_fail_place.token * self.system_fail_place.token
 
         self.__treat_data_collector__(sample_size)
         estimation = fail_count / sample_size
-        return estimation, estimation * (1 - estimation)
+        return estimation, var_count / sample_size - estimation ** 2
 
     def simulate_tokens(self, duration):
         # reset the net
