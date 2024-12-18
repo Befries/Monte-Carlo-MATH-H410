@@ -164,3 +164,62 @@ def build_two_comp_passive_redundancy_reliability(failure_rate1, failure_rate2, 
     end_transition.add_downstream(end_place)
 
     return system
+
+
+def build_obsolescence_strategy_k_net(unit_amount, k, fail_rate_old, fail_rate_new, replacement_cost, corrective_cost,
+                                      intervention_cost):
+    system = PetriNetSystem()
+    counter_place = Place("counter")
+    system.add_place(counter_place)
+    replaced_all_place = Place("replaced all")
+    system.add_place(replaced_all_place)
+    cost_place = Place("cost")
+    system.add_system_fail_place(cost_place)  # to compute the average cost
+
+    strategy_transition = InstantTransition("strategy transition")
+    system.add_transition(strategy_transition)
+    strategy_transition.add_upstream(counter_place, k)
+    strategy_message = Message("strategy transition")
+    strategy_transition.attach_emitter(strategy_message, True)
+
+    def build_module(index):
+        old_place = Place(f"old {index}", starting_marking=1)
+        system.add_place(old_place)
+
+        old_fail_transition = ProbabilityRateTransition(f"old fail {index}", fail_rate_old)
+        system.add_transition(old_fail_transition)
+        old_replace_transition = InstantTransition(f"old replace {index}")
+        system.add_transition(old_replace_transition)
+        old_replace_transition.attach_message(strategy_message, True)
+
+        new_place = Place(f"new {index}")
+        system.add_place(new_place)
+
+        old_fail_transition.add_upstream(old_place)
+        old_fail_transition.add_downstream(new_place)
+        old_replace_transition.add_upstream(old_place)
+        old_replace_transition.add_downstream(new_place)
+
+        old_fail_transition.add_downstream(counter_place)
+        old_fail_transition.add_downstream(cost_place, weight=(replacement_cost + intervention_cost))
+        old_replace_transition.add_downstream(cost_place, weight=replacement_cost)
+
+        fail_place = Place(f"fail {index}")
+        system.add_place(fail_place)
+
+        new_fail_transition = ProbabilityRateTransition(f"new fail {index}", fail_rate_new)
+        system.add_transition(new_fail_transition)
+        new_repair_transition = InstantTransition(f"new repair {index}")
+        system.add_transition(new_repair_transition)
+
+        new_fail_transition.add_upstream(new_place)
+        new_fail_transition.add_downstream(fail_place)
+        new_repair_transition.add_upstream(fail_place)
+        new_repair_transition.add_downstream(new_place)
+
+        new_fail_transition.add_downstream(cost_place, weight=(corrective_cost + intervention_cost))
+
+    for i in range(unit_amount):
+        build_module(i + 1)
+
+    return system, cost_place

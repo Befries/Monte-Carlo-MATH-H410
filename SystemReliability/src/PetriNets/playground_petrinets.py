@@ -9,30 +9,33 @@ def acquire_characteristics():
     """
     function to test the algorithm
     """
-    system, _ = pse.build_parallel_system([1.0, 1.0], [1.0, 1.0])
+    start = time.perf_counter()
+    system, cost_place = pse.build_obsolescence_strategy_k_net(4, 2, 3, 1, 50, 5, 20)
+    print(f"system built in {time.perf_counter() - start} seconds")
     # simulate system reliability over time for different mission durations
     population_size = 10000
-    duration_sample_size = 10
-    duration_samples = np.logspace(0, 1.6, duration_sample_size)
-    unavailability = np.empty_like(duration_samples)
-    availability_variance = np.empty_like(duration_samples)
+    duration_sample_size = 15
+    mission_time = 50
+    duration_samples = np.logspace(-1, np.log10(mission_time), duration_sample_size)
+    cost = np.empty_like(duration_samples)
+    cost_variance = np.empty_like(duration_samples)
 
     mean_sojourn_failure = np.empty_like(duration_samples)
     sojourn_failure_variance = np.empty_like(duration_samples)
 
     start = time.perf_counter()
     for i, duration in enumerate(duration_samples):
-        unavailability[i], availability_variance[i] = system.run_simulation(duration, population_size)
+        cost[i], cost_variance[i] = system.run_simulation(duration, population_size)
         mean_sojourn_failure[i] = system.system_fail_place.mean_sojourn_time
         sojourn_failure_variance[i] = system.system_fail_place.sojourn_time_variance
     end = time.perf_counter()
     print(f"Simulation time: {end - start:.3f} seconds")
 
     fig, axs = plt.subplots(2)
-    axs[0].semilogx(duration_samples, mean_sojourn_failure)
-    axs[0].set_title("Mean Sojourn Time")
-    axs[1].semilogx(duration_samples, sojourn_failure_variance)
-    axs[1].set_title("variance")
+    axs[0].semilogx(duration_samples, cost / duration_samples)
+    axs[0].set_title("Cost per unit of time")
+    axs[1].semilogx(duration_samples, np.sqrt(cost_variance/population_size))
+    axs[1].set_title("Standard deviation")
     plt.tight_layout()
     plt.show()
 
