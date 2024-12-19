@@ -63,6 +63,7 @@ class Place:
 
         # data collectors
         self.sojourn_time = 0.0
+        self.mean_total_sojourn_time = 0.0
         self.mean_sojourn_time = 0.0
         self.sojourn_time_variance = 0.0
         self.amount_of_entering = 0.0
@@ -93,12 +94,14 @@ class Place:
 
     def add_experience(self):
         if self.sojourn_time != 0.0:
+            self.mean_total_sojourn_time += self.sojourn_time
             self.sojourn_time /= self.amount_of_entering
             self.mean_sojourn_time += self.sojourn_time
             self.sojourn_time_variance += self.sojourn_time ** 2
 
     def treat_data(self, sample_size):
         self.mean_sojourn_time /= sample_size
+        self.mean_total_sojourn_time /= sample_size
         self.sojourn_time_variance = self.sojourn_time_variance / sample_size - self.mean_sojourn_time ** 2
 
 

@@ -63,10 +63,11 @@ def simulate_state_graph_evolution_component_based(state_graph_matrix: np.ndarra
         while True:
             next_state = state
             time_passed = 1e400  # = infinity
+
             for candidate in range(state_graph_matrix.shape[0]):
                 if state_graph_matrix[state, candidate] == 0.0 or candidate == state:
                     continue
-                candidate_time = np.random.exponential(state_graph_matrix[state, candidate])
+                candidate_time = np.random.exponential(1/state_graph_matrix[state, candidate])
                 if candidate_time < time_passed:
                     next_state = candidate
                     time_passed = candidate_time

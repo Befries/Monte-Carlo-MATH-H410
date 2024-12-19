@@ -14,8 +14,8 @@ def acquire_characteristics():
     print(f"system built in {time.perf_counter() - start} seconds")
     # simulate system reliability over time for different mission durations
     population_size = 10000
-    duration_sample_size = 15
-    mission_time = 50
+    duration_sample_size = 20
+    mission_time = 100
     duration_samples = np.logspace(-1, np.log10(mission_time), duration_sample_size)
     cost = np.empty_like(duration_samples)
     cost_variance = np.empty_like(duration_samples)
